@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+
+<suite name="Llack VM Tests" verbose="1">
+  <test name="VMTest">
+    <classes>
+      <class name="org.llack.vm.VMTest" />
+    </classes>
+  </test>
+</suite>
