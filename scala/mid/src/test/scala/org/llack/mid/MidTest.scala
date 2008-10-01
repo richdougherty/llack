@@ -124,5 +124,6 @@ class MidTest extends TestNGSuite with Checkers {
 
     Compiler.compile("main", Nil, dict, module)    
     println(Disassembler.disassemble(module))
+    println(CPlusPlusEmitter.emit(module))
   }
 }

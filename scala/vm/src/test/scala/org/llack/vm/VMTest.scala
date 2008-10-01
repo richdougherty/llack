@@ -12,8 +12,7 @@ import org.scalatest._
 
 class VMTest extends TestNGSuite with Checkers {
 
-  @Test
-  def testAssemble: Unit = {
+  private def testModule: Module = {
     val i32 = IntegerType(32)
 
     val m = new Module
@@ -61,7 +60,17 @@ class VMTest extends TestNGSuite with Checkers {
       MulInst(i32)
     ))
 
-
-    println(Disassembler.disassemble(m))
+    m
   }
+
+  @Test
+  def testAssemble: Unit = {
+    println(Disassembler.disassemble(testModule))
+  }
+
+  @Test
+  def testEmitCPlusPlus: Unit = {
+    println(CPlusPlusEmitter.emit(testModule))
+  }
+
 }
