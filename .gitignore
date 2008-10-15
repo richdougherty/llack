@@ -1,6 +1,8 @@
 scala/target
 scala/*/target
+cpp/build
 .*
 *~
 .#*
 *#
+*.xcodeproj
