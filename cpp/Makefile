@@ -1,6 +1,6 @@
-##===- projects/sample/Makefile ----------------------------*- Makefile -*-===##
+##===- projects/llack/Makefile ----------------------------*- Makefile -*-===##
 #
-# This is a sample Makefile for a project that uses LLVM.
+# This is a llack Makefile for a project that uses LLVM.
 #
 ##===----------------------------------------------------------------------===##
 

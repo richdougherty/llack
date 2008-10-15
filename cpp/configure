@@ -1300,13 +1300,13 @@ fi;
           ac_config_commands="$ac_config_commands lib/Makefile"
 
 
-          ac_config_commands="$ac_config_commands lib/sample/Makefile"
+          ac_config_commands="$ac_config_commands lib/llack/Makefile"
 
 
           ac_config_commands="$ac_config_commands tools/Makefile"
 
 
-          ac_config_commands="$ac_config_commands tools/sample/Makefile"
+          ac_config_commands="$ac_config_commands tools/llack/Makefile"
 
 
 
@@ -1883,9 +1883,9 @@ do
   "setup" ) CONFIG_COMMANDS="$CONFIG_COMMANDS setup" ;;
   "Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS Makefile" ;;
   "lib/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS lib/Makefile" ;;
-  "lib/sample/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS lib/sample/Makefile" ;;
+  "lib/llack/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS lib/llack/Makefile" ;;
   "tools/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS tools/Makefile" ;;
-  "tools/sample/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS tools/sample/Makefile" ;;
+  "tools/llack/Makefile" ) CONFIG_COMMANDS="$CONFIG_COMMANDS tools/llack/Makefile" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;
@@ -2325,12 +2325,12 @@ echo "$as_me: executing $ac_dest commands" >&6;}
    ${SHELL} ${llvm_src}/autoconf/install-sh -c ${srcdir}/Makefile Makefile ;;
     lib/Makefile ) ${llvm_src}/autoconf/mkinstalldirs `dirname lib/Makefile`
    ${SHELL} ${llvm_src}/autoconf/install-sh -c ${srcdir}/lib/Makefile lib/Makefile ;;
-    lib/sample/Makefile ) ${llvm_src}/autoconf/mkinstalldirs `dirname lib/sample/Makefile`
-   ${SHELL} ${llvm_src}/autoconf/install-sh -c ${srcdir}/lib/sample/Makefile lib/sample/Makefile ;;
+    lib/llack/Makefile ) ${llvm_src}/autoconf/mkinstalldirs `dirname lib/llack/Makefile`
+   ${SHELL} ${llvm_src}/autoconf/install-sh -c ${srcdir}/lib/llack/Makefile lib/llack/Makefile ;;
     tools/Makefile ) ${llvm_src}/autoconf/mkinstalldirs `dirname tools/Makefile`
    ${SHELL} ${llvm_src}/autoconf/install-sh -c ${srcdir}/tools/Makefile tools/Makefile ;;
-    tools/sample/Makefile ) ${llvm_src}/autoconf/mkinstalldirs `dirname tools/sample/Makefile`
-   ${SHELL} ${llvm_src}/autoconf/install-sh -c ${srcdir}/tools/sample/Makefile tools/sample/Makefile ;;
+    tools/llack/Makefile ) ${llvm_src}/autoconf/mkinstalldirs `dirname tools/llack/Makefile`
+   ${SHELL} ${llvm_src}/autoconf/install-sh -c ${srcdir}/tools/llack/Makefile tools/llack/Makefile ;;
   esac
 done
 _ACEOF

@@ -1,4 +1,4 @@
-##===- projects/sample/tools/Makefile ----------------------*- Makefile -*-===##
+##===- projects/llack/tools/Makefile ----------------------*- Makefile -*-===##
 
 #
 # Relative path to the top of the source tree.
@@ -8,6 +8,6 @@ LEVEL=..
 #
 # List all of the subdirectories that we will compile.
 #
-DIRS=sample
+DIRS=llack
 
 include $(LEVEL)/Makefile.common

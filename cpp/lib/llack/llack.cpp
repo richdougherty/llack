@@ -1,8 +1,8 @@
 /*
- * File: sample.c
+ * File: llack.c
  *
  * Description:
- *  This is a sample source file for a library.  It helps to demonstrate
+ *  This is a llack source file for a library.  It helps to demonstrate
  *  how to setup a project that uses the LLVM build system, header files,
  *  and libraries.
  */
@@ -15,10 +15,10 @@
 */
 
 /* Header file global to this project */
-#include "sample.h"
+#include "llack.h"
 
 /*int
-compute_sample (int a)
+compute_llack (int a)
 {
   return a;
   }*/
@@ -33,7 +33,7 @@ compute_sample (int a)
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetData.h"
 
-//#include "sample.h"
+//#include "llack.h"
 
 using namespace llvm;
 

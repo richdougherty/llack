@@ -24,9 +24,9 @@ dnl Configure project makefiles
 dnl List every Makefile that exists within your source tree
 AC_CONFIG_MAKEFILE(Makefile)
 AC_CONFIG_MAKEFILE(lib/Makefile)
-AC_CONFIG_MAKEFILE(lib/sample/Makefile)
+AC_CONFIG_MAKEFILE(lib/llack/Makefile)
 AC_CONFIG_MAKEFILE(tools/Makefile)
-AC_CONFIG_MAKEFILE(tools/sample/Makefile)
+AC_CONFIG_MAKEFILE(tools/llack/Makefile)
 
 dnl **************************************************************************
 dnl * Determine which system we are building on

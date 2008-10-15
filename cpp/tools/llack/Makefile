@@ -1,4 +1,4 @@
-##===- projects/sample/tools/sample/Makefile ---------------*- Makefile -*-===##
+##===- projects/llack/tools/llack/Makefile ---------------*- Makefile -*-===##
 
 #
 # Indicate where we are relative to the top of the source tree.
@@ -8,13 +8,13 @@ LEVEL=../..
 #
 # Give the name of the tool.
 #
-TOOLNAME=Sample
+TOOLNAME=Llack
 
 #
 # List libraries that we'll need
-# We use LIBS because sample is a dynamic library.
+# We use LIBS because llack is a dynamic library.
 #
-USEDLIBS = sample.a
+USEDLIBS = llack.a
 
 LINK_COMPONENTS := jit bitwriter native interpreter
 
