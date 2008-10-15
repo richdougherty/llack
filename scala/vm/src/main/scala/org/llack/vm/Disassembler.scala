@@ -11,7 +11,8 @@ object Disassembler {
     builder.append("\n")
 
     for (word <- module.words) {
-      builder.append("define quot @" + word.name.getOrElse("unnamed") + " {\n")
+      val externString = if (word.extern) "extern " else ""
+      builder.append("define " + externString +  "quot @" + word.name.getOrElse("unnamed") + " {\n")
       for (inst <- word.quotation.getOrElse(Quotation()).instructions) { builder.append("  " + inst.toString + "\n") }
       builder.append("}\n")
       builder.append("\n")

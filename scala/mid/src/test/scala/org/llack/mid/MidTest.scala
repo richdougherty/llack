@@ -22,7 +22,7 @@ class MidTest extends TestNGSuite with Checkers {
 
     def addPrimitive(dict: Dictionary, wid: GenericWord.Id, specializer: PartialFunction[GenericWord.Args, InstructionWriter]): Unit = {
       dict(wid) = new GenericWord {
-	def inline = true
+	def extern = false
 	def specialize(args: GenericWord.Args) = {
 	  if (specializer.isDefinedAt(args)) specializer(args)
 	  else error(wid + ": incorrect args: " + args)
@@ -55,9 +55,14 @@ class MidTest extends TestNGSuite with Checkers {
         def write(buf: InstructionBuffer) = buf.append(SelectInst(t))
       }
     })
-    addPrimitive(dict, "apply", {
+    addPrimitive(dict, "tocont", {
       case Nil => new InstructionWriter {
-        def write(buf: InstructionBuffer) = buf.append(ApplyInst)
+        def write(buf: InstructionBuffer) = buf.append(ToContInst)
+      }
+    })
+    addPrimitive(dict, "fromcont", {
+      case Nil => new InstructionWriter {
+        def write(buf: InstructionBuffer) = buf.append(FromContInst)
       }
     })
     addPrimitive(dict, "add", {
@@ -81,13 +86,13 @@ class MidTest extends TestNGSuite with Checkers {
       }
     })
 
-    Term.addToDictionary(dict, "if", true, QuotationTerm(List(
+    Term.addToDictionary(dict, "if", false, QuotationTerm(List(
       WordTerm("select", List(ConstantArgument(QuotationType))),
-      WordTerm("apply", Nil)
+      WordTerm("tocont", Nil)
     )))
 
 
-    Term.addToDictionary(dict, "factorial", false, QuotationTerm(List(
+    Term.addToDictionary(dict, "factorial", true, QuotationTerm(List(
       LiteralTerm(1, VariableArgument(0)),
       WordTerm("factorial_accum", List(VariableArgument(0)))
     )))
@@ -112,7 +117,7 @@ class MidTest extends TestNGSuite with Checkers {
       WordTerm("if", Nil)
     )))
 
-    Term.addToDictionary(dict, "main", false, QuotationTerm(List(
+    Term.addToDictionary(dict, "main", true, QuotationTerm(List(
       LiteralTerm(5, ConstantArgument(i32)),
       WordTerm("factorial", List(ConstantArgument(i32)))
     )))

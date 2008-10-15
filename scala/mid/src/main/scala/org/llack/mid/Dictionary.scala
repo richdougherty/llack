@@ -11,7 +11,7 @@ object GenericWord {
 }
 
 trait GenericWord {
-  def inline: Boolean
+  def extern: Boolean
   def specialize(args: GenericWord.Args): InstructionWriter
 }
 
@@ -27,8 +27,8 @@ trait InstructionWriter {
 class Dictionary {
   private var nextId = 0
   private val m = new mutable.HashMap[GenericWord.Id, GenericWord]
-  def freshWordId(hint: Option[String]): GenericWord.Id = {
-    val wid = hint.getOrElse("") + "$anon" + nextId
+  def freshWordId(prefix: Option[String]): GenericWord.Id = {
+    val wid = prefix.getOrElse("anon$") + nextId
     nextId += 1
     wid
   }

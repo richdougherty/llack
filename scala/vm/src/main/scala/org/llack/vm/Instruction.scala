@@ -21,9 +21,11 @@ case class ToRetainInst(t: Type) extends Instruction {
 case class FromRetainInst(t: Type) extends Instruction {
   override def toString = "fromretain " + t
 }
-// Control flow within quotations
-case object ApplyInst extends Instruction {
-  override def toString = "apply"
+case object ToContInst extends Instruction {
+  override def toString = "tocont"
+}
+case object FromContInst extends Instruction {
+  override def toString = "fromcont"
 }
 //case object RetInst extends Instruction
 // LLVM term instructions

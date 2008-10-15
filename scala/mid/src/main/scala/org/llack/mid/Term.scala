@@ -19,36 +19,14 @@ case class QuotationFTerm(wid: GenericWord.Id, termArgs: List[TermArgument]) ext
 case class LiteralFTerm(value: Any, typ: TermArgument) extends FlattenedTerm
 case object ApplyFTerm extends FlattenedTerm
 
+trait LinearTerm
+case class QuotationLTerm(wid: GenericWord.Id, termArgs: List[TermArgument]) extends LinearTerm
+case class LiteralLTerm(value: Any, typ: TermArgument) extends LinearTerm
+case object ToContLTerm extends LinearTerm
+
 object Term {
 
-  def substituteArg(termArg: TermArgument, args: GenericWord.Args): Any = termArg match {
-    case ConstantArgument(v) => v
-    case VariableArgument(i) => args(i)
-  }
-
-  def createGenericWord(shouldInline: Boolean, quotation: List[FlattenedTerm]): GenericWord =
-    new GenericWord {
-      def inline = shouldInline
-      def specialize(args: GenericWord.Args) = new InstructionWriter {
-        def write(buf: InstructionBuffer) = {
-          for (term <- quotation) term match {
-            case QuotationFTerm(wid, termArgs) => {
-              val substitutedArgs =  termArgs.map(substituteArg(_, args))
-              buf.pushQuotation(wid, substitutedArgs)
-            }
-            case ApplyFTerm => {
-              buf.append(ApplyInst)
-            }
-            case LiteralFTerm(value, typ) => substituteArg(typ, args) match {
-              case substitutedType: Type => buf.append(PushInst(substitutedType, value))
-              case other => error("LiteralTerm expects a Type argument: " + other)
-            }
-          }
-        }
-      }
-    }
-
-  class VariableRewriter {
+  private class VariableRewriter {
     val oldToNew = new mutable.HashMap[Int, Int]
     val newToOld = new mutable.HashMap[Int, Int]
     var newCount = 0
@@ -73,6 +51,12 @@ object Term {
       case QuotationTerm(terms) => QuotationTerm(terms.map(rewriteOldTerm(_)))
     }).asInstanceOf[T]
 
+    def rewriteOldFTerm[T <: FlattenedTerm](term: T): T = (term match {
+      case ApplyFTerm => ApplyFTerm
+      case LiteralFTerm(value, typ) => LiteralFTerm(value, rewriteOldArg(typ))
+      case QuotationFTerm(wid, termArgs) => QuotationFTerm(wid, termArgs.map(rewriteOldArg(_)))
+    }).asInstanceOf[T]
+
     def rewrittenArgs: List[TermArgument] = {
       (for (newIndex <- 0 until newCount) yield {
         val oldIndex = newToOld(newIndex)
@@ -81,20 +65,20 @@ object Term {
     }
   }
 
-  def addChild(dict: Dictionary, parentWid: GenericWord.Id, child: QuotationTerm): QuotationFTerm = {
+  private def addChild(dict: Dictionary, parentWid: GenericWord.Id, child: QuotationTerm): QuotationFTerm = {
     // Rewrite variables
     val rewriter = new VariableRewriter
     val rewrittenChild = rewriter.rewriteOldTerm(child)
 
     // Add to dictionary
-    val childWid = dict.freshWordId(Some(parentWid))
+    val childWid = dict.freshWordId(Some(parentWid + "$q"))
     addToDictionary(dict, childWid, false, rewrittenChild)
 
     // Return reference for parent, with appropriate variables
     QuotationFTerm(childWid, rewriter.rewrittenArgs)
   }
 
-  def flatten(dict: Dictionary, parentWid: GenericWord.Id, parent: QuotationTerm): List[FlattenedTerm] = {
+  private def flatten(dict: Dictionary, parentWid: GenericWord.Id, parent: QuotationTerm): List[FlattenedTerm] = {
     parent.terms.flatMap {
       case child: QuotationTerm => {
         addChild(dict, parentWid, child) :: Nil
@@ -106,9 +90,66 @@ object Term {
     }.asInstanceOf[List[FlattenedTerm]] // XXX: Shouldn't need cast
   }
 
-  def addToDictionary(dict: Dictionary, wid: GenericWord.Id, inline: Boolean, quotation: QuotationTerm): Unit = {
+  private def addFlattenedToDictionary(dict: Dictionary, wid: GenericWord.Id, rootWid: GenericWord.Id, makeExtern: Boolean, flattened: List[FlattenedTerm]): Unit = {
+    val (beforeApply, restWithApply) = flattened.break(_ == ApplyFTerm)
+    val callRestLTerms = restWithApply match {
+      case Nil => Nil
+      case ApplyFTerm :: Nil => {
+        List(
+          ToContLTerm
+        )
+      }
+      case ApplyFTerm :: rest => {
+        val rewriter = new VariableRewriter
+        val rewrittenRest = for (fTerm <- rest) yield { rewriter.rewriteOldFTerm(fTerm) }
+
+        val restWid = dict.freshWordId(Some(rootWid + "$k"))
+        addFlattenedToDictionary(dict, restWid, rootWid, false, rewrittenRest)
+        // The following sequence will call the quotation currently
+        // on the data stack, then call the word containing the
+        // rest of the terms in this flattened quotation.
+        List(
+          QuotationLTerm(restWid, rewriter.rewrittenArgs),
+          ToContLTerm,
+          ToContLTerm
+        )
+      }
+    }
+    val linear = (beforeApply.map {
+      case QuotationFTerm(wid, termArgs) => QuotationLTerm(wid, termArgs)
+      case LiteralFTerm(value, typ) => LiteralLTerm(value, typ)
+    }) ++ callRestLTerms
+
+    val genericWord = new GenericWord {
+      def extern = makeExtern
+      def specialize(args: GenericWord.Args) = new InstructionWriter {
+        def write(buf: InstructionBuffer) = {
+          def substituteArg(termArg: TermArgument): Any = termArg match {
+            case ConstantArgument(v) => v
+            case VariableArgument(i) => args(i)
+          }
+          for (term <- linear) term match {
+            case QuotationLTerm(wid, termArgs) => {
+              val substitutedArgs =  termArgs.map(substituteArg(_))
+              buf.pushQuotation(wid, substitutedArgs)
+            }
+            case ToContLTerm => {
+              buf.append(ToContInst)
+            }
+            case LiteralLTerm(value, typ) => substituteArg(typ) match {
+              case substitutedType: Type => buf.append(PushInst(substitutedType, value))
+              case other => error("LiteralTerm expects a Type argument: " + other)
+            }
+          }
+        }
+      }
+    }
+    dict(wid) = genericWord
+  }
+
+  def addToDictionary(dict: Dictionary, wid: GenericWord.Id, makeExtern: Boolean, quotation: QuotationTerm): Unit = {
     val flattened = flatten(dict, wid, quotation)
-    val word = createGenericWord(inline, flattened)
-    dict(wid) = word
+    val linear = addFlattenedToDictionary(dict, wid, wid, makeExtern, flattened)
+    ()
   }
 }

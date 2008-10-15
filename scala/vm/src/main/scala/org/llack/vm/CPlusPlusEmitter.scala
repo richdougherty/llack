@@ -15,7 +15,7 @@ object CPlusPlusEmitter {
     def pspace = p("\n")
 
     def typeString(t: Type): String = t match {
-      case IntegerType(n) => "IntegerType::get()"
+      case IntegerType(n) => "IntegerType::get(" + n + ")"
       case QuotationType => "QuotationType::get()"
       case other => error("Cannot emit C++ code for: " + other)
     }
@@ -30,13 +30,12 @@ object CPlusPlusEmitter {
     }
 
 
-    pln("using namespace llack;")
-    pln("Module* mod = new Module(\"" + mod.moduleIdentifier.get + "\");")
+    pln("LlackModule* mod = new LlackModule*(\"" + mod.moduleIdentifier.get + "\");")
     pln("mod->setDataLayout(\"" + mod.dataLayout.get + "\");")
     pln("mod->setTargetTriple(\"" + mod.targetTriple.get + "\");")
 
     for (word <- mod.words) {
-      pln("Word* word_" + word.name.get + " = Word::Create(\"" + word.name.get + "\");")
+      pln("Word* word_" + word.name.get + " = Word::Create(\"" + word.name.get + "\", mod);")
     }
 
     for (word <- mod.words) {
@@ -49,28 +48,27 @@ object CPlusPlusEmitter {
         pln("{")
         indent += 1
         pln("// " + inst.toString)
-        def pinst(s: String) = pln("Instruction* inst = " + s + ";")
+        def pinst(s: String) = pln("LlackInstruction* inst = " + s + ";")
         inst match {
           case ShuffleInst(ts, is) => {
             pln("std::vector<Type*> consumption;")
-            for (t <- ts) { pln("consumption.push_back(" + typeString(t) + ");") }
+            for (t <- ts) { pln("consumption.push_back(const_cast<Type*>((Type*) " + typeString(t) + "));") }
             pln("std::vector<int> production;")
             for (i <- is) { pln("production.push_back(" + i + ");") }
-            pinst("new ShuffleInst(consumption, production)")
+            pinst("new ShuffleLlackInst(consumption, production)")
           }
-          case SelectInst(t) => pinst("new SelectInst(" + typeString(t) + ")")
-          case AddInst(t) => pinst("new AddInst(" + typeString(t) + ")")
-          case MulInst(t) => pinst("new MulInst(" + typeString(t) + ")")
-          case SubInst(t) => pinst("new SubInst(" + typeString(t) + ")")
-          case ApplyInst => pinst("new ApplyInst()")
-          case ICmpInst(ic, t) => pinst("new ICmpInst(" + iCondString(ic) + ", " + typeString(t) + ")")
-          case PushInst(t, v) => {
-            pln("Value* value = " + valueString(t, v) + ";")
-            pinst("new PushInst(" + typeString(t) + ", value)")
-          }
+          case SelectInst(t) => pinst("new SelectLlackInst(" + typeString(t) + ")")
+          case AddInst(t) => pinst("new AddLlackInst(" + typeString(t) + ")")
+          case MulInst(t) => pinst("new MulLlackInst(" + typeString(t) + ")")
+          case SubInst(t) => pinst("new SubLlackInst(" + typeString(t) + ")")
+          case ToContInst => pinst("new ToContLlackInst()")
+          case FromContInst => pinst("new FromContLlackInst()")
+          case ICmpInst(ic, t) => pinst("new ICmpLlackInst(" + iCondString(ic) + ", " + typeString(t) + ")")
+          case PushInst(QuotationType, v) => pinst("new PushWordLlackInst(" + valueString(QuotationType, v) + ")")
+          case PushInst(t, v) => pinst("new PushLlackInst(" + valueString(t, v) + ")")
           case other => error("Cannot emit C++ code for: " + other)
         }
-        pln("word->instructions.push_back(inst)")
+        pln("word->instructions.push_back(inst);")
         indent -= 1
         pln("}")
       }

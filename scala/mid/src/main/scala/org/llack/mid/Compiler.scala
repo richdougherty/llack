@@ -20,7 +20,7 @@ object Compiler {
       module.getWord(name) match {
         case Some(word) => word
         case None => {
-          val word = new Word(Some(name), None)
+          val word = new Word(Some(name), false, None)
           module.words + word
           wordsToCompile + cwid
           word
@@ -37,55 +37,24 @@ object Compiler {
       val genericWord = dict(cwid.wid).getOrElse(error("Word not defined: " + cwid.wid))
       val instructionWriter = genericWord.specialize(cwid.args)
 
-      case class PushQuotation(wid: GenericWord.Id, args: GenericWord.Args)
-
       class SimpleInstructionBuffer extends InstructionBuffer {
-        private val data = new mutable.ArrayBuffer[Any]
+        private val data = new mutable.ArrayBuffer[Instruction]
         def append(inst: Instruction): Unit = {
           data + inst
         }
         def pushQuotation(wid: GenericWord.Id, args: GenericWord.Args): Unit = {
-          data + PushQuotation(wid, args)
-        }
-        def toList: List[Any] = data.toList
-      }
-
-      def getFixpoint[A](f: A => A, input: A): A = {
-        val output = f(input)
-        if (output == input) output
-        else getFixpoint(f, output)
-      }
-
-      def resolveCalls(input: List[Any]): List[Instruction] = input match {
-        case PushQuotation(wid, args) :: tail => {
           val cwid = ConcreteWordId(wid, args)
-          PushInst(QuotationType, getWord(cwid)) :: resolveCalls(tail)
+          data + PushInst(QuotationType, getWord(cwid))
         }
-        case (head: Instruction) :: tail => head :: resolveCalls(tail)
-        case Nil => Nil
-        case other => error("Cannot resolve calls for: " + other)
-      }
-
-      // XXX: Handle inline cycles?
-      def inline(input: List[Any]): List[Any] = input match {
-        case PushQuotation(wid, args) :: ApplyInst :: tail if dict(wid).get.inline => {
-          val inlineBuf = new SimpleInstructionBuffer
-          val calleeInstructionWriter = dict(wid).get.specialize(args)
-          calleeInstructionWriter.write(inlineBuf)
-          inlineBuf.toList ::: tail
-        }
-        case head :: tail => head :: inline(tail)
-        case Nil => Nil
+        def toList = data.toList
       }
 
       val buf = new SimpleInstructionBuffer
       instructionWriter.write(buf)
-      val inlined = getFixpoint(inline(_: List[Any]), buf.toList)
-      val resolved = resolveCalls(inlined)
-      val instructions = resolved
       
       val word = getWord(cwid)
-      word.quotation = Some(Quotation(instructions.toArray: _*))
+      word.quotation = Some(Quotation(buf.toList.toArray: _*))
+      word.extern = genericWord.extern
       wordsToCompile - cwid
     }
 

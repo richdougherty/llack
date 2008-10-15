@@ -20,19 +20,21 @@ class VMTest extends TestNGSuite with Checkers {
     m.dataLayout = Some("e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128")
     m.targetTriple = Some("i386-apple-darwin8")
 
-    val ifWord = new Word(Some("if"), None)
-    val factorialWord = new Word(Some("factorial"), None)
-    val factorialAnon1Word = new Word(Some("factorial$anon1"), None)
-    val factorialAnon2Word = new Word(Some("factorial$anon1"), None)
+    val ifWord = new Word(Some("if"), false, None)
+    val factorialWord = new Word(Some("factorial"), true, None)
+    val factorialAnon1Word = new Word(Some("factorial$anon1"), false, None)
+    val factorialAnon2Word = new Word(Some("factorial$anon2"), false, None)
+    val factorialAnon2Part2Word = new Word(Some("factorial$anon2$part2"), false, None)
 
     m.words + ifWord
     m.words + factorialWord
     m.words + factorialAnon1Word
     m.words + factorialAnon2Word
+    m.words + factorialAnon2Part2Word
 
     ifWord.quotation = Some(Quotation(
       SelectInst(QuotationType),
-      ApplyInst
+      ToContInst
     ))
 
     factorialWord.quotation = Some(Quotation(
@@ -42,7 +44,7 @@ class VMTest extends TestNGSuite with Checkers {
       PushInst(QuotationType, factorialAnon1Word),
       PushInst(QuotationType, factorialAnon2Word),
       PushInst(QuotationType, ifWord),
-      ApplyInst
+      ToContInst
     ))
 
     factorialAnon1Word.quotation = Some(Quotation(
@@ -55,8 +57,13 @@ class VMTest extends TestNGSuite with Checkers {
       PushInst(i32, 1),
       ShuffleInst(List(i32, i32), List(1, 0)), // swap i32 i32
       SubInst(i32),
+      PushInst(QuotationType, factorialAnon2Part2Word),
+      ToContInst,
       PushInst(QuotationType, factorialWord),
-      ApplyInst,
+      ToContInst
+    ))
+
+    factorialAnon2Part2Word.quotation = Some(Quotation(
       MulInst(i32)
     ))
 
