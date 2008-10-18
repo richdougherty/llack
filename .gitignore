@@ -6,3 +6,8 @@ cpp/build
 .#*
 *#
 *.xcodeproj
+Debug
+Release
+cpp/Makefile.common
+cpp/config.log
+cpp/config.status
