@@ -37,35 +37,13 @@ compute_llack (int a)
 
 using namespace llvm;
 
-/*class BlockBuilder {
- private:
-  IRBuilder* builder;
-  Value* vmstatePtr;
- public:
-  BlockBuilder(BasicBlock *bb, Value* _vmstatePtr)
-    : vmstatePtr(_vmstatePtr)
-  {
+Word* LlackModule::getWord(const std::string& name) {
+  for (std::vector<Word*>::iterator iter = words.begin(); iter < words.end(); ++iter) {
+    Word* word = *iter;
+    if (word->name == name) return word;
   }
-  
-  //Value *insertInstruction(Instruction *inst) {
-  //  return builder->insert(inst);
-  //}
-  Value *insertPopData(IRBuilder* builder, Type *ty) {
-    Value *dataPtr = builder->CreateGEP(vmstatePtr, 0, "dataPtr");
-    Value *dataTop = builder->CreateLoad(dataPtr, "dataTop");
-    Value *elementSize = ConstantInt::get(Type::Int32Ty, 8); // XXX: calculate from ty
-    Value *newDataTop = builder->CreateSub(dataTop, elementSize);
-    Value *element = builder->CreateLoad(newDataTop, "element");
-    return element;
-  }
-  void insertPushData(Type *ty) {
-  }
-  BlockBuilder* insertConditional(Value* boolValue) {
-    return NULL;
-  }
-  };*/
-
-//SwapOp::~SwapOp() {}
+  return NULL;
+}
 
 LlackInstruction::~LlackInstruction() {}
 

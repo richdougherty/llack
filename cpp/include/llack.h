@@ -4,7 +4,9 @@
  *      This is a llack header file that is global to the entire project.
  *      It is located here so that everyone will find it.
  */
-//extern int compute_llack (int a);
+ 
+#ifndef LLACK_LLACK_H
+#define LLACK_LLACK_H
 
 #include "llvm/DerivedTypes.h"
 #include "llvm/GlobalValue.h"
@@ -41,6 +43,7 @@ class Word;
 class LlackModule {
  public:
   std::vector<Word*> words;
+  Word* getWord(const std::string& name);
 };
 
 class LlackInstruction {
@@ -191,3 +194,4 @@ class ShuffleLlackInst : public LlackInstruction {
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
 
+#endif

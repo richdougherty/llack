@@ -14,7 +14,7 @@ TOOLNAME=Llack
 # List libraries that we'll need
 # We use LIBS because llack is a dynamic library.
 #
-USEDLIBS = llack.a
+USEDLIBS = llack.a llacktest.a
 
 LINK_COMPONENTS := jit bitwriter native interpreter
 

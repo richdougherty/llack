@@ -8,6 +8,6 @@ LEVEL=..
 #
 # List all of the subdirectories that we will compile.
 #
-DIRS=llack
+DIRS=llack llacktest
 
 include $(LEVEL)/Makefile.common
