@@ -32,6 +32,8 @@ compute_llack (int a)
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetData.h"
+#include "llvm/CallingConv.h"
+#include "llvm/ExecutionEngine/GenericValue.h"
 
 //#include "llack.h"
 
@@ -241,4 +243,232 @@ void dumpVMState(VMState* vmState) {
   printf("vmState->cont: %p\n", vmState->cont);
   dumpStack(vmState->contBottom, vmState->cont);
   printf("----------\n");
+}
+
+/// Interpretables ///
+
+Interpretable::~Interpretable() {}
+
+void WordInterpretable::initFunction() {
+
+  Module* module = pw->getModule();
+
+  Type* stackType = PointerType::getUnqual(Type::Int8Ty);
+  Type* vmStateType = StructType::get(
+     stackType, // data
+     stackType, // retain
+     stackType, // cont
+     NULL
+    );
+  
+  // Build Function for Word.
+
+  std::vector<const Type*> argTypes;
+  argTypes.push_back(PointerType::getUnqual(vmStateType));
+  FunctionType *funcTy = FunctionType::get(Type::VoidTy, argTypes, false);
+  
+  // Build Function for Word
+  
+  function = Function::Create(funcTy, Function::ExternalLinkage, "", module);
+  function->setCallingConv(CallingConv::Fast);
+  
+  Function::arg_iterator args = function->arg_begin();
+  Value* vmStatePtr = args++;
+  vmStatePtr->setName("vmStatePtr");
+
+  BasicBlock *bb = BasicBlock::Create("entry", function);
+  IRBuilder builder;
+  builder.SetInsertPoint(bb);
+  
+  VMCodeGenInterface* cgi = pw->getVMCodeGenInterface(vmStatePtr, &builder);
+  codeGen(NULL, cgi);
+  builder.CreateRetVoid();
+}
+
+void WordInterpretable::interpret(void* vpc, VMState* vmState) {
+  if (function == NULL) {
+    initFunction();
+  }
+  ExecutionEngine* ee = pw->getExecutionEngine();
+  std::vector<GenericValue> argValues(1);
+  argValues[0].PointerVal = vmState;
+  //printf("Running code.\n");
+  ee->runFunction(function, argValues);
+}
+
+WordInterpretable::~WordInterpretable() {
+  ExecutionEngine* ee = pw->getExecutionEngine();
+  ee->freeMachineCodeForFunction(function);
+}
+
+void WordInterpretable::codeGen(void* vpc, VMCodeGenInterface* cgi) {
+  for (std::vector<LlackInstruction*>::iterator iter = word->instructions.begin(); iter < word->instructions.end(); ++iter) {
+    // Instruction generation
+  
+    LlackInstruction* inst = *iter;
+    //printf("Generating instruction code.\n");
+    //Value *dataSP = builder.CreateStructGEP(vmStatePtr, 0);
+    inst->codeGen(cgi);
+
+    // Pointer to dumping Code
+    
+    /*if (generateDebug) {
+      ConstantInt* intValue = ConstantInt::get(Type::Int32Ty, (int) &dumpVMState, false);
+      Value* dumpVMStatePtr = builder.CreateIntToPtr(intValue, PointerType::getUnqual(funcTy));
+      builder.CreateCall(dumpVMStatePtr, vmStatePtr);
+    }*/
+  }    
+}
+
+/*
+class PushInterpretable : public Interpretable {
+ public:
+  PushInterpretable() {}
+  virtual void interpret(void* vpc, VMState* vmState);
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi);
+};
+
+class CallInterpretable : public Interpretable {
+ public:
+  CallInterpretable() {}
+  virtual void interpret(void* vpc, VMState* vmState);
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi);
+};
+
+class JumpInterpretable : public Interpretable {
+ public:
+  JumpInterpretable() {}
+  virtual void interpret(void* vpc, VMState* vmState);
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi);
+};
+
+class ReturnInterpretable : public Interpretable {
+ public:
+  ReturnInterpretable() {}
+  virtual void interpret(void* vpc, VMState* vmState);
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi);
+};
+*/
+
+ProgramWriter::ProgramWriter(int size, Module* module, ExecutionEngine* ee) {
+  first = new char[size];
+  next = first;
+  last = first + size;
+  this->module = module;
+  this->ee = ee;
+}
+
+ProgramWriter::~ProgramWriter() {
+  // XXX: Delete all interpretables.
+  delete[] first;
+}
+
+ProgramWriter::Location ProgramWriter::insertWord(Word* word) {
+  printf("setting location for %s to %p\n", word->name.c_str(), (void*) next);
+  ProgramWriter::Location nextLocation = (ProgramWriter::Location) next;
+  *nextLocation = new WordInterpretable(word, this);
+  wordMap[word] = nextLocation;
+  next += sizeof(ProgramWriter::Location);
+  return nextLocation;
+}
+
+//Location ProgramWriter::insertPush(Constant* constant);
+//Location ProgramWriter::insertCall(Location location);
+//Location ProgramWriter::insertJump(Location location);
+//Location ProgramWriter::insertReturn();
+
+ProgramWriter::Location ProgramWriter::getWordLocation(Word* word) {
+  printf("getting location for: %s\n", word->name.c_str());
+  return wordMap[word];
+}
+
+VMCodeGenInterface* ProgramWriter::getVMCodeGenInterface(Value* vmStatePtr, IRBuilder* builder) {
+  return new ProgramVMCodeGenInterface(this, vmStatePtr, builder);
+}
+
+
+
+ProgramVMCodeGenInterface::~ProgramVMCodeGenInterface() {}
+const TargetData* ProgramVMCodeGenInterface::getTargetData() {
+  return pw->getExecutionEngine()->getTargetData();
+}
+Type* ProgramVMCodeGenInterface::getContType() {
+  // XXX: could use actual function type; would make it
+  // easier to do tail call...
+  return PointerType::getUnqual(Type::Int8Ty);
+}
+Value* ProgramVMCodeGenInterface::getWordCont(Word* word) {
+  ProgramWriter::Location location = pw->getWordLocation(word);
+  assert(location != NULL);
+  ConstantInt* intValue = ConstantInt::get(Type::Int32Ty, (int) location, false);
+  Value* ptrValue = builder->CreateIntToPtr(intValue, getContType());
+  return ptrValue;
+}
+void ProgramVMCodeGenInterface::pushData(Value *v) {
+  push(getDataStack(), v);
+}
+Value* ProgramVMCodeGenInterface::popData(const Type *t) {
+  return pop(getDataStack(), t);
+}
+void ProgramVMCodeGenInterface::pushRetain(Value *v) {
+  push(getRetainStack(), v);
+}
+Value* ProgramVMCodeGenInterface::popRetain(Type *t) {
+  return pop(getRetainStack(), t);
+}
+void ProgramVMCodeGenInterface::pushCont(Value *v) {
+  push(getContStack(), v);
+}
+Value* ProgramVMCodeGenInterface::popCont() {
+  return pop(getContStack(), getContType());
+}
+Instruction* ProgramVMCodeGenInterface::addInstruction(Instruction* inst) {
+  return builder->Insert(inst);
+}
+Type* ProgramVMCodeGenInterface::getStackType() {
+  return PointerType::getUnqual(Type::Int8Ty);
+}
+Type* ProgramVMCodeGenInterface::getVMStateType() {
+  return StructType::get(
+			 getStackType(), // data
+			 getStackType(), // retain
+			 getStackType(), // cont
+			 NULL
+			 );
+}
+Value* ProgramVMCodeGenInterface::getDataStack() {
+  return builder->CreateStructGEP(vmStatePtr, 0);
+}
+Value* ProgramVMCodeGenInterface::getRetainStack() {
+  return builder->CreateStructGEP(vmStatePtr, 1);
+}
+Value* ProgramVMCodeGenInterface::getContStack() {
+  return builder->CreateStructGEP(vmStatePtr, 2);
+}
+void ProgramVMCodeGenInterface::push(Value* stack, Value* v) {
+  const Type *t = v->getType();
+
+  Value *top = builder->CreateLoad(stack);
+  Value *castTop = builder->CreateBitCast(top, PointerType::getUnqual(t));
+  builder->CreateStore(v, castTop);
+
+  // XXX: align stack
+  const TargetData* td = pw->getExecutionEngine()->getTargetData();
+  int elementSize = td->getTypeStoreSize(t);
+  ConstantInt *topDelta = ConstantInt::get(Type::Int32Ty, elementSize, true);
+  Value *newTop = builder->CreateGEP(top, topDelta);
+  builder->CreateStore(newTop, stack);
+}
+Value* ProgramVMCodeGenInterface::pop(Value* stack, const Type* t) {
+  const TargetData* td = pw->getExecutionEngine()->getTargetData();
+  int elementSize = td->getTypeStoreSize(t);
+  ConstantInt *topDelta = ConstantInt::get(Type::Int32Ty, -1 * elementSize, true);
+  // move top down
+  Value *top = builder->CreateLoad(stack);
+  Value *newTop = builder->CreateGEP(top, topDelta);
+  builder->CreateStore(newTop, stack);
+  // load value
+  Value *castTop = builder->CreateBitCast(newTop, PointerType::getUnqual(t));
+  Value *topValue = builder->CreateLoad(castTop);
+  return topValue;
 }

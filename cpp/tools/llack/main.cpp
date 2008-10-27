@@ -12,6 +12,7 @@
 #include "llvm/ModuleProvider.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/CallingConv.h"
+#include "llvm/ADT/StringMap.h"
 
 void printStack(char* message, char* bot, char* top) {
   printf("%s:\n", message);
@@ -87,7 +88,7 @@ int
 main (int argc, char ** argv)
 {
   LlackModule* mod = createFactorialModule();
-
+  
   /// Running
 
   Module *module = new Module("module");
@@ -96,32 +97,30 @@ main (int argc, char ** argv)
   
   ExistingModuleProvider emp(module);
   ExecutionEngine *ee = ExecutionEngine::create(&emp, false);
-  
+
+  ProgramWriter* pw = new ProgramWriter(1024, module, ee);
+  for (std::vector<Word*>::iterator iter = mod->words.begin(); iter < mod->words.end(); ++iter) {
+    pw->insertWord(*iter);
+  }
+
   VMState *vmState = newVMState();
 
   push(&vmState->cont, (Word*) NULL);  
   Word* word_main = mod->getWord("main");
+  ProgramWriter::Location mainLocation = pw->getWordLocation(word_main);
   printf("pushing main onto cont: %p\n", (void*) word_main);
   assert(word_main != NULL && "Expected 'main' word.");
-  push(&vmState->cont, word_main);
+  push(&vmState->cont, mainLocation);
 
   for (;;) {
     dumpVMState(vmState);
 
-    Word* cont = pop<Word*>(&vmState->cont);
+    Interpretable** cont = pop<Interpretable**>(&vmState->cont);
     
     if (cont == NULL) break;
-    printf("==== cont: %s (%p) ====\n", cont->name.c_str(), (void*) cont);
-    
-    Function* func = generateFunction(module, ee, cont, true);
-
-    // Run Function.
-    
-    std::vector<GenericValue> argValues(1);
-    argValues[0].PointerVal = vmState;
-    printf("Running code.\n");
-    ee->runFunction(func, argValues);
-    ee->freeMachineCodeForFunction(func);
+    printf("==== cont: (%p) ====\n", (void*) cont);
+    Interpretable* i = *cont;
+    i->interpret(cont + 1, vmState);
   }
   
   freeVMState(vmState);

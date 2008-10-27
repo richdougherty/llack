@@ -194,4 +194,117 @@ class ShuffleLlackInst : public LlackInstruction {
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
 
+class Interpretable {
+ public:
+  virtual ~Interpretable() = 0;
+  /// Execute this region at the given VPC.
+  virtual void interpret(void* vpc, VMState* vmState) = 0;
+  /// Generate code to execute this region at the given VPC.
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi) = 0;
+};
+
+class ProgramWriter {
+ public:
+  typedef Interpretable** Location;
+ private:
+  char* first;
+  char* next;
+  char* last;
+  std::map<Word*,Location> wordMap;
+  Module* module;
+  ExecutionEngine* ee;
+ public:
+  ProgramWriter(int size, Module* module, ExecutionEngine* ee);
+  ~ProgramWriter();
+  
+  Module* getModule() {
+    return module;
+  }
+  ExecutionEngine* getExecutionEngine() {
+    return ee;
+  }
+  VMCodeGenInterface* getVMCodeGenInterface(Value* vmStatePtr, IRBuilder* builder);
+  
+  Location insertWord(Word* word);
+  Location insertPush(Constant* constant);
+  Location insertCall(Location location);
+  Location insertJump(Location location);
+  Location insertReturn();
+  /// Get the location of the given, already-inserted word.
+  Location getWordLocation(Word* word);
+  
+};
+
+// XXX: Needs better name.
+class ProgramVMCodeGenInterface : public VMCodeGenInterface {
+ private:
+  ProgramWriter* pw;
+  Value* vmStatePtr;
+  IRBuilder* builder;
+ public:
+  ProgramVMCodeGenInterface(ProgramWriter* pw_, Value* vmStatePtr_, IRBuilder* builder_):
+    pw(pw_), vmStatePtr(vmStatePtr_), builder(builder_) {}
+  virtual ~ProgramVMCodeGenInterface();
+  virtual const TargetData* getTargetData();
+  virtual Type* getContType();
+  virtual Value* getWordCont(Word* word);
+  virtual void pushData(Value *v);
+  virtual Value* popData(const Type *t);
+  virtual void pushRetain(Value *v);
+  virtual Value* popRetain(Type *t);
+  virtual void pushCont(Value *v);
+  virtual Value* popCont();
+  virtual Instruction* addInstruction(Instruction* inst);
+ private:
+  Type* getStackType();
+  Type* getVMStateType();
+  Value* getDataStack();
+  Value* getRetainStack();
+  Value* getContStack();
+  void push(Value* stack, Value* v);
+  Value* pop(Value* stack, const Type* t);
+};
+
+
+class WordInterpretable : public Interpretable {
+ private:
+  Word* word;
+  Function* function;
+  ProgramWriter* pw;
+  void initFunction();
+ public:
+  WordInterpretable(Word* word_, ProgramWriter* pw_) : word(word_), pw(pw_) {}
+  virtual ~WordInterpretable();
+  virtual void interpret(void* vpc, VMState* vmState);
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi);
+};
+
+class PushInterpretable : public Interpretable {
+ public:
+  PushInterpretable() {}
+  virtual void interpret(void* vpc, VMState* vmState);
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi);
+};
+
+class CallInterpretable : public Interpretable {
+ public:
+  CallInterpretable() {}
+  virtual void interpret(void* vpc, VMState* vmState);
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi);
+};
+
+class JumpInterpretable : public Interpretable {
+ public:
+  JumpInterpretable() {}
+  virtual void interpret(void* vpc, VMState* vmState);
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi);
+};
+
+class ReturnInterpretable : public Interpretable {
+ public:
+  ReturnInterpretable() {}
+  virtual void interpret(void* vpc, VMState* vmState);
+  virtual void codeGen(void* vpc, VMCodeGenInterface* cgi);
+};
+
 #endif
