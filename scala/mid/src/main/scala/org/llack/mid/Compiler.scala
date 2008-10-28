@@ -32,30 +32,34 @@ object Compiler {
 
     while (!wordsToCompile.isEmpty) {
       val cwid = wordsToCompile.elements.next
-      wordsToCompile - cwid
+      try {
+        wordsToCompile - cwid
 
-      val genericWord = dict(cwid.wid).getOrElse(error("Word not defined: " + cwid.wid))
-      val instructionWriter = genericWord.specialize(cwid.args)
+        val genericWord = dict(cwid.wid).getOrElse(error("Word not defined: " + cwid.wid))
+        val instructionWriter = genericWord.specialize(cwid.args)
 
-      class SimpleInstructionBuffer extends InstructionBuffer {
-        private val data = new mutable.ArrayBuffer[Instruction]
-        def append(inst: Instruction): Unit = {
-          data + inst
+        class SimpleInstructionBuffer extends InstructionBuffer {
+          private val data = new mutable.ArrayBuffer[Instruction]
+          def append(inst: Instruction): Unit = {
+            data + inst
+          }
+          def pushQuotation(wid: GenericWord.Id, args: GenericWord.Args): Unit = {
+            val cwid = ConcreteWordId(wid, args)
+            data + PushInst(QuotationType, getWord(cwid))
+          }
+          def toList = data.toList
         }
-        def pushQuotation(wid: GenericWord.Id, args: GenericWord.Args): Unit = {
-          val cwid = ConcreteWordId(wid, args)
-          data + PushInst(QuotationType, getWord(cwid))
-        }
-        def toList = data.toList
-      }
 
-      val buf = new SimpleInstructionBuffer
-      instructionWriter.write(buf)
+        val buf = new SimpleInstructionBuffer
+        instructionWriter.write(buf)
       
-      val word = getWord(cwid)
-      word.quotation = Some(Quotation(buf.toList.toArray: _*))
-      word.extern = genericWord.extern
-      wordsToCompile - cwid
+        val word = getWord(cwid)
+        word.quotation = Some(Quotation(buf.toList.toArray: _*))
+        word.extern = genericWord.extern
+        wordsToCompile - cwid // XXX: redundant?
+      } catch {
+        case e: Exception => throw new Exception("Error compiling: " + cwid, e)
+      }
     }
 
     mainWord
