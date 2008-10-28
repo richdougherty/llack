@@ -62,7 +62,7 @@ LlackModule* createFactorialModule() {
     }
     {
       // push quot @factorial$i32
-      LlackInstruction* inst = new PushWordLlackInst(word_factorial$i32);
+      LlackInstruction* inst = new PushLlackInst(word_factorial$i32);
       word->instructions.push_back(inst);
     }
     {
@@ -82,7 +82,7 @@ LlackModule* createFactorialModule() {
     }
     {
       // push quot @factorial_accum$i32
-      LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$i32);
+      LlackInstruction* inst = new PushLlackInst(word_factorial_accum$i32);
       word->instructions.push_back(inst);
     }
     {
@@ -97,12 +97,12 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$i32;
     {
       // push quot @swap$i32_i32
-      LlackInstruction* inst = new PushWordLlackInst(word_swap$i32_i32);
+      LlackInstruction* inst = new PushLlackInst(word_swap$i32_i32);
       word->instructions.push_back(inst);
     }
     {
       // push quot @factorial_accum$k8$i32
-      LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$k8$i32);
+      LlackInstruction* inst = new PushLlackInst(word_factorial_accum$k8$i32);
       word->instructions.push_back(inst);
     }
     {
@@ -138,12 +138,12 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$k8$i32;
     {
       // push quot @dup$i32
-      LlackInstruction* inst = new PushWordLlackInst(word_dup$i32);
+      LlackInstruction* inst = new PushLlackInst(word_dup$i32);
       word->instructions.push_back(inst);
     }
     {
       // push quot @factorial_accum$k9$i32
-      LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$k9$i32);
+      LlackInstruction* inst = new PushLlackInst(word_factorial_accum$k9$i32);
       word->instructions.push_back(inst);
     }
     {
@@ -183,12 +183,12 @@ LlackModule* createFactorialModule() {
     }
     {
       // push quot @icmp$sle_i32
-      LlackInstruction* inst = new PushWordLlackInst(word_icmp$sle_i32);
+      LlackInstruction* inst = new PushLlackInst(word_icmp$sle_i32);
       word->instructions.push_back(inst);
     }
     {
       // push quot @factorial_accum$k10$i32
-      LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$k10$i32);
+      LlackInstruction* inst = new PushLlackInst(word_factorial_accum$k10$i32);
       word->instructions.push_back(inst);
     }
     {
@@ -218,17 +218,17 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$k10$i32;
     {
     // push quot @factorial_accum$q1$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$q1$i32);
+    LlackInstruction* inst = new PushLlackInst(word_factorial_accum$q1$i32);
     word->instructions.push_back(inst);
     }
     {
     // push quot @factorial_accum$q2$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$q2$i32);
+    LlackInstruction* inst = new PushLlackInst(word_factorial_accum$q2$i32);
     word->instructions.push_back(inst);
     }
     {
     // push quot @if
-    LlackInstruction* inst = new PushWordLlackInst(word_if);
+    LlackInstruction* inst = new PushLlackInst(word_if);
     word->instructions.push_back(inst);
     }
     {
@@ -243,7 +243,7 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$q1$i32;
     {
     // push quot @drop$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_drop$i32);
+    LlackInstruction* inst = new PushLlackInst(word_drop$i32);
     word->instructions.push_back(inst);
     }
     {
@@ -258,12 +258,12 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$q2$i32;
     {
     // push quot @dup$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_dup$i32);
+    LlackInstruction* inst = new PushLlackInst(word_dup$i32);
     word->instructions.push_back(inst);
     }
     {
     // push quot @factorial_accum$q2$k3$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$q2$k3$i32);
+    LlackInstruction* inst = new PushLlackInst(word_factorial_accum$q2$k3$i32);
     word->instructions.push_back(inst);
     }
     {
@@ -283,12 +283,12 @@ LlackModule* createFactorialModule() {
     Word* word = word_if;
     {
     // push quot @select$quot
-    LlackInstruction* inst = new PushWordLlackInst(word_select$quot);
+    LlackInstruction* inst = new PushLlackInst(word_select$quot);
     word->instructions.push_back(inst);
     }
     {
     // push quot @if$k0
-    LlackInstruction* inst = new PushWordLlackInst(word_if$k0);
+    LlackInstruction* inst = new PushLlackInst(word_if$k0);
     word->instructions.push_back(inst);
     }
     {
@@ -326,12 +326,12 @@ LlackModule* createFactorialModule() {
     }
     {
     // push quot @sub$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_sub$i32);
+    LlackInstruction* inst = new PushLlackInst(word_sub$i32);
     word->instructions.push_back(inst);
     }
     {
     // push quot @factorial_accum$q2$k4$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$q2$k4$i32);
+    LlackInstruction* inst = new PushLlackInst(word_factorial_accum$q2$k4$i32);
     word->instructions.push_back(inst);
     }
     {
@@ -361,12 +361,12 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$q2$k4$i32;
     {
     // push quot @swap$i32_i32
-    LlackInstruction* inst = new PushWordLlackInst(word_swap$i32_i32);
+    LlackInstruction* inst = new PushLlackInst(word_swap$i32_i32);
     word->instructions.push_back(inst);
     }
     {
     // push quot @factorial_accum$q2$k5$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$q2$k5$i32);
+    LlackInstruction* inst = new PushLlackInst(word_factorial_accum$q2$k5$i32);
     word->instructions.push_back(inst);
     }
     {
@@ -386,12 +386,12 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$q2$k5$i32;
     {
     // push quot @rot$i32_i32_i32
-    LlackInstruction* inst = new PushWordLlackInst(word_rot$i32_i32_i32);
+    LlackInstruction* inst = new PushLlackInst(word_rot$i32_i32_i32);
     word->instructions.push_back(inst);
     }
     {
     // push quot @factorial_accum$q2$k6$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$q2$k6$i32);
+    LlackInstruction* inst = new PushLlackInst(word_factorial_accum$q2$k6$i32);
     word->instructions.push_back(inst);
     }
     {
@@ -429,12 +429,12 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$q2$k6$i32;
     {
     // push quot @mul$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_mul$i32);
+    LlackInstruction* inst = new PushLlackInst(word_mul$i32);
     word->instructions.push_back(inst);
     }
     {
     // push quot @factorial_accum$q2$k7$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$q2$k7$i32);
+    LlackInstruction* inst = new PushLlackInst(word_factorial_accum$q2$k7$i32);
     word->instructions.push_back(inst);
     }
     {
@@ -464,7 +464,7 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$q2$k7$i32;
     {
     // push quot @factorial_accum$i32
-    LlackInstruction* inst = new PushWordLlackInst(word_factorial_accum$i32);
+    LlackInstruction* inst = new PushLlackInst(word_factorial_accum$i32);
     word->instructions.push_back(inst);
     }
     {
@@ -489,7 +489,7 @@ LlackModule* createFactorialModule() {
     Word* word = word_if$k0;
     {
     // push quot @tocont
-    LlackInstruction* inst = new PushWordLlackInst(word_tocont);
+    LlackInstruction* inst = new PushLlackInst(word_tocont);
     word->instructions.push_back(inst);
     }
     {

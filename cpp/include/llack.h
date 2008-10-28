@@ -145,19 +145,6 @@ class SimpleVMCodeGenInterface : public VMCodeGenInterface {
   Value* pop(Value* stack, const Type* t);
 };
 
-// XXX: Need sep instruction for Words until we implement
-// a LlackValue type.
-class PushWordLlackInst : public LlackInstruction {
- private:
-  Word* word;
- public:
- PushWordLlackInst(Word* word_)
-   : word(word_)
-  {}
-  virtual ~PushWordLlackInst();
-  virtual void codeGen(VMCodeGenInterface* cgi);
-};
-
 class PushLlackInst : public LlackInstruction {
  private:
   LlackValue* v;

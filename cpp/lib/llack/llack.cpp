@@ -175,12 +175,6 @@ void PushLlackInst::codeGen(VMCodeGenInterface* cgi)  {
   cgi->pushData(llvmValue);
 }
 
-PushWordLlackInst::~PushWordLlackInst()  {}
-void PushWordLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  Value* v = cgi->getWordCont(word);
-  cgi->pushData(v);
-}
-
 ToContLlackInst::~ToContLlackInst()  {}
 void ToContLlackInst::codeGen(VMCodeGenInterface* cgi)  {
   Value* v = cgi->popData(cgi->getContType());
