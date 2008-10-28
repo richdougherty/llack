@@ -49,6 +49,10 @@ Word* LlackModule::getWord(const std::string& name) {
 
 LlackInstruction::~LlackInstruction() {}
 
+const Type* LlvmLlackType::getLlvmType() const {
+  return llvmType;
+}
+
 Word::Word() {}
 
 Word* Word::Create(const std::string& name, LlackModule* mod) {
@@ -59,6 +63,30 @@ Word* Word::Create(const std::string& name, LlackModule* mod) {
 }
 
 VMCodeGenInterface::~VMCodeGenInterface() {}
+
+const Type* VMCodeGenInterface::getLlvmType(const LlackType* llackType) {
+  if (const LlvmLlackType* llvmLlackType = dynamic_cast<const LlvmLlackType*>(llackType)) {
+    return llvmLlackType->getLlvmType();
+  } else if (dynamic_cast<const QuotationType*>(llackType) != NULL) {
+    return getContType();
+  } else {
+    // XXX: More straightforward error handling?
+    assert(false && "Unknown LlvmValue type.");
+    return NULL;
+  }
+}
+
+Value* VMCodeGenInterface::getLlvmValue(LlackValue* llackValue) {
+  if (LlvmLlackValue* llvmLlackValue = dynamic_cast<LlvmLlackValue*>(llackValue)) {
+    return llvmLlackValue->getLlvmValue();
+  } else if (Word* word = dynamic_cast<Word*>(llackValue)) {
+    return getWordCont(word);
+  } else {
+    // XXX: More straightforward error handling?
+    assert(false && "Unknown LlvmValue type.");
+    return NULL;
+  }
+}
 
 SimpleVMCodeGenInterface::~SimpleVMCodeGenInterface() {}
 const TargetData* SimpleVMCodeGenInterface::getTargetData() {
@@ -141,10 +169,10 @@ Value* SimpleVMCodeGenInterface::pop(Value* stack, const Type* t) {
   return topValue;
 }
 
-
 PushLlackInst::~PushLlackInst()  {}
 void PushLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  cgi->pushData(v);
+  Value* llvmValue = cgi->getLlvmValue(v);
+  cgi->pushData(llvmValue);
 }
 
 PushWordLlackInst::~PushWordLlackInst()  {}
@@ -183,8 +211,9 @@ void MulLlackInst::codeGen(VMCodeGenInterface* cgi)  {
 
 SelectLlackInst::~SelectLlackInst()  {}
 void SelectLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  Value* falseValue = cgi->popData(t);
-  Value* trueValue = cgi->popData(t);
+  const Type* llvmType = cgi->getLlvmType(t);
+  Value* falseValue = cgi->popData(llvmType);
+  Value* trueValue = cgi->popData(llvmType);
   Value* boolean = cgi->popData(Type::Int1Ty);
   Value* result = cgi->addInstruction(SelectInst::Create(boolean, trueValue, falseValue));
   cgi->pushData(result);
@@ -201,9 +230,10 @@ void ICmpLlackInst::codeGen(VMCodeGenInterface* cgi)  {
 ShuffleLlackInst::~ShuffleLlackInst()  {}
 void ShuffleLlackInst::codeGen(VMCodeGenInterface* cgi)  {
   std::vector<Value*> values;
-  for (std::vector<Type*>::iterator iter = consumption.begin(); iter < consumption.end(); ++iter) {
-    Type* t = *iter;
-    Value* v = cgi->popData(t);
+  for (std::vector<LlackType*>::iterator iter = consumption.begin(); iter < consumption.end(); ++iter) {
+    LlackType* llackType = *iter;
+    const Type* llvmType = cgi->getLlvmType(llackType);
+    Value* v = cgi->popData(llvmType);
     values.push_back(v);
   }
   std::reverse(values.begin(), values.end()); // XXX: Could avoid this for efficiency.

@@ -57,7 +57,7 @@ LlackModule* createFactorialModule() {
     Word* word = word_main;
     {
       // push i32 5
-      LlackInstruction* inst = new PushLlackInst(ConstantInt::get(APInt(32,  "5", 10)));
+      LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "5", 10))));
       word->instructions.push_back(inst);
     }
     {
@@ -77,7 +77,7 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial$i32;
     {
       // push i32 1
-      LlackInstruction* inst = new PushLlackInst(ConstantInt::get(APInt(32,  "1", 10)));
+      LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "1", 10))));
       word->instructions.push_back(inst);
     }
     {
@@ -122,9 +122,9 @@ LlackModule* createFactorialModule() {
     Word* word = word_swap$i32_i32;
     {
       // shuffle i32 i32 1 0
-      std::vector<Type*> consumption;
-      consumption.push_back(const_cast<Type*>((Type*) IntegerType::get(32)));
-      consumption.push_back(const_cast<Type*>((Type*) IntegerType::get(32)));
+      std::vector<LlackType*> consumption;
+      consumption.push_back(new LlvmLlackType(IntegerType::get(32)));
+      consumption.push_back(new LlvmLlackType(IntegerType::get(32)));
       std::vector<int> production;
       production.push_back(1);
       production.push_back(0);
@@ -163,8 +163,8 @@ LlackModule* createFactorialModule() {
     Word* word = word_dup$i32;
     {
       // shuffle i32 0 0
-      std::vector<Type*> consumption;
-      consumption.push_back(const_cast<Type*>((Type*) IntegerType::get(32)));
+      std::vector<LlackType*> consumption;
+      consumption.push_back(new LlvmLlackType(IntegerType::get(32)));
       std::vector<int> production;
       production.push_back(0);
       production.push_back(0);
@@ -178,7 +178,7 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$k9$i32;
     {
       // push i32 1
-      LlackInstruction* inst = new PushLlackInst(ConstantInt::get(APInt(32,  "1", 10)));
+      LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "1", 10))));
       word->instructions.push_back(inst);
     }
     {
@@ -308,8 +308,8 @@ LlackModule* createFactorialModule() {
     Word* word = word_drop$i32;
     {
     // shuffle i32
-    std::vector<Type*> consumption;
-    consumption.push_back(const_cast<Type*>((Type*) IntegerType::get(32)));
+    std::vector<LlackType*> consumption;
+    consumption.push_back(new LlvmLlackType(IntegerType::get(32)));
     std::vector<int> production;
     LlackInstruction* inst = new ShuffleLlackInst(consumption, production);
     word->instructions.push_back(inst);
@@ -321,7 +321,7 @@ LlackModule* createFactorialModule() {
     Word* word = word_factorial_accum$q2$k3$i32;
     {
     // push i32 1
-    LlackInstruction* inst = new PushLlackInst(ConstantInt::get(APInt(32,  "1", 10)));
+    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "1", 10))));
     word->instructions.push_back(inst);
     }
     {
@@ -411,10 +411,10 @@ LlackModule* createFactorialModule() {
     Word* word = word_rot$i32_i32_i32;
     {
     // shuffle i32 i32 i32 1 2 0
-    std::vector<Type*> consumption;
-    consumption.push_back(const_cast<Type*>((Type*) IntegerType::get(32)));
-    consumption.push_back(const_cast<Type*>((Type*) IntegerType::get(32)));
-    consumption.push_back(const_cast<Type*>((Type*) IntegerType::get(32)));
+    std::vector<LlackType*> consumption;
+    consumption.push_back(new LlvmLlackType(IntegerType::get(32)));
+    consumption.push_back(new LlvmLlackType(IntegerType::get(32)));
+    consumption.push_back(new LlvmLlackType(IntegerType::get(32)));
     std::vector<int> production;
     production.push_back(1);
     production.push_back(2);
@@ -479,7 +479,7 @@ LlackModule* createFactorialModule() {
     Word* word = word_select$quot;
     {
     // select quot
-    LlackInstruction* inst = new SelectLlackInst(PointerType::getUnqual(Type::Int8Ty));
+    LlackInstruction* inst = new SelectLlackInst(new LlvmLlackType(PointerType::getUnqual(Type::Int8Ty)));
     word->instructions.push_back(inst);
     }
   }

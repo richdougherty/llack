@@ -52,12 +52,48 @@ class LlackInstruction {
   virtual void codeGen(VMCodeGenInterface* cgi) = 0;
 };
 
-class Word {
+// XXX: Need to think about memory management for these types.
+// XXX: Anchor.
+class LlackType {
+ public:
+  virtual ~LlackType() {}
+};
+class LlvmLlackType : public LlackType {
+ private:
+  const Type* llvmType;
+ public:
+  LlvmLlackType(const Type* llvmType_) : llvmType(llvmType_) {}
+  const Type* getLlvmType() const;
+};
+class QuotationType : public LlackType {}; // XXX: Make singleton?
+
+// XXX: Anchor.
+class LlackValue {
+ public:
+  virtual ~LlackValue() {}
+  virtual LlackType* getLlackType() = 0;
+};
+class LlvmLlackValue : public LlackValue {
+ private:
+  Value* llvmValue;
+ public:
+  LlvmLlackValue(Value* llvmValue_) : llvmValue(llvmValue_) {}
+  Value* getLlvmValue() { return llvmValue; }
+  virtual LlackType* getLlackType() {
+    const Type* llackType = llvmValue->getType();
+    return new LlvmLlackType(llackType);
+  }
+};
+
+class Word : public LlackValue {
  public:
   Word();
   std::string name;
   std::vector<LlackInstruction*> instructions;
   static Word* Create(const std::string& name, LlackModule* mod);
+  virtual LlackType* getLlackType() {
+    return new QuotationType();
+  }
 };
 
 class VMCodeGenInterface {
@@ -74,6 +110,8 @@ class VMCodeGenInterface {
   virtual void pushCont(Value *v) = 0;
   virtual Value* popCont() = 0;
   virtual Instruction* addInstruction(Instruction* inst) = 0;
+  const Type* getLlvmType(const LlackType* llackType);
+  Value* getLlvmValue(LlackValue* llackValue);
 };
 
 class SimpleVMCodeGenInterface : public VMCodeGenInterface {
@@ -122,9 +160,9 @@ class PushWordLlackInst : public LlackInstruction {
 
 class PushLlackInst : public LlackInstruction {
  private:
-  Value* v;
+  LlackValue* v;
  public:
- PushLlackInst(Value* v_)
+ PushLlackInst(LlackValue* v_)
    : v(v_)
   {}
   virtual ~PushLlackInst();
@@ -147,7 +185,7 @@ class FromContLlackInst : public LlackInstruction {
 
 class SubLlackInst : public LlackInstruction {
  private:
-  const Type* t;
+  const Type* t; // XXX: Make into LlackType?
  public:
  SubLlackInst(const Type* t_) : t(t_) {}
   virtual ~SubLlackInst();
@@ -156,16 +194,16 @@ class SubLlackInst : public LlackInstruction {
 
 class SelectLlackInst : public LlackInstruction {
  private:
-  const Type* t;
+  const LlackType* t;
  public:
- SelectLlackInst(const Type* t_) : t(t_) {}
+ SelectLlackInst(const LlackType* t_) : t(t_) {}
   virtual ~SelectLlackInst();
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
 
 class MulLlackInst : public LlackInstruction {
  private:
-  const Type* t;
+  const Type* t; // XXX: Make into LlackType?
  public:
  MulLlackInst(const Type* t_) : t(t_) {}
   virtual ~MulLlackInst();
@@ -184,10 +222,10 @@ class ICmpLlackInst : public LlackInstruction {
 
 class ShuffleLlackInst : public LlackInstruction {
  private:
-  std::vector<Type*> consumption;
+  std::vector<LlackType*> consumption;
   std::vector<int> production;
  public:
- ShuffleLlackInst(std::vector<Type*> consumption_, std::vector<int> production_)
+ ShuffleLlackInst(std::vector<LlackType*> consumption_, std::vector<int> production_)
    : consumption(consumption_), production(production_)
   {}
   virtual ~ShuffleLlackInst();
