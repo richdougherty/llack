@@ -15,12 +15,12 @@ object CPlusPlusEmitter {
     def pspace = p("\n")
 
     def typeString(t: Type): String = t match {
-      case IntegerType(n) => "IntegerType::get(" + n + ")"
-      case QuotationType => "QuotationType::get()"
+      case IntegerType(n) => "new LlvmLlackType(IntegerType::get(" + n + "))"
+      case QuotationType => "new QuotationType()"
       case other => error("Cannot emit C++ code for: " + other)
     }
     def valueString(t: Type, v: Any): String = (t, v) match {
-      case (IntegerType(n), i) => "ConstantInt::get(APInt(" + n + ",  \"" + i +  "\", 10))"
+      case (IntegerType(n), i) => "new LlvmLlackValue(ConstantInt::get(APInt(" + n + ",  \"" + i +  "\", 10)))"
       case (QuotationType, w: Word) => "word_" + w.name.get
       case other => error("Cannot emit C++ code for: " + other)
     }
@@ -30,9 +30,9 @@ object CPlusPlusEmitter {
     }
 
 
-    pln("LlackModule* mod = new LlackModule*(\"" + mod.moduleIdentifier.get + "\");")
-    pln("mod->setDataLayout(\"" + mod.dataLayout.get + "\");")
-    pln("mod->setTargetTriple(\"" + mod.targetTriple.get + "\");")
+    pln("LlackModule* mod = new LlackModule(" + /* "\"" + mod.moduleIdentifier.get + "\"" + */ ");")
+    //pln("mod->setDataLayout(\"" + mod.dataLayout.get + "\");")
+    //pln("mod->setTargetTriple(\"" + mod.targetTriple.get + "\");")
 
     for (word <- mod.words) {
       pln("Word* word_" + word.name.get + " = Word::Create(\"" + word.name.get + "\", mod);")
@@ -51,8 +51,8 @@ object CPlusPlusEmitter {
         def pinst(s: String) = pln("LlackInstruction* inst = " + s + ";")
         inst match {
           case ShuffleInst(ts, is) => {
-            pln("std::vector<Type*> consumption;")
-            for (t <- ts) { pln("consumption.push_back(const_cast<Type*>((Type*) " + typeString(t) + "));") }
+            pln("std::vector<LlackType*> consumption;")
+            for (t <- ts) { pln("consumption.push_back(" + typeString(t) + ");") }
             pln("std::vector<int> production;")
             for (i <- is) { pln("production.push_back(" + i + ");") }
             pinst("new ShuffleLlackInst(consumption, production)")
@@ -64,7 +64,6 @@ object CPlusPlusEmitter {
           case ToContInst => pinst("new ToContLlackInst()")
           case FromContInst => pinst("new FromContLlackInst()")
           case ICmpInst(ic, t) => pinst("new ICmpLlackInst(" + iCondString(ic) + ", " + typeString(t) + ")")
-          case PushInst(QuotationType, v) => pinst("new PushWordLlackInst(" + valueString(QuotationType, v) + ")")
           case PushInst(t, v) => pinst("new PushLlackInst(" + valueString(t, v) + ")")
           case other => error("Cannot emit C++ code for: " + other)
         }

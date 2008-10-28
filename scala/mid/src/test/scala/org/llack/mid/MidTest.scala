@@ -86,6 +86,10 @@ class MidTest extends TestNGSuite with Checkers {
       }
     })
 
+    Term.addToDictionary(dict, "apply", false, QuotationTerm(List(
+      WordTerm("tocont", Nil)
+    )))
+
     Term.addToDictionary(dict, "if", false, QuotationTerm(List(
       WordTerm("select", List(ConstantArgument(QuotationType))),
       WordTerm("tocont", Nil)
@@ -117,9 +121,38 @@ class MidTest extends TestNGSuite with Checkers {
       WordTerm("if", Nil)
     )))
 
+    // (A (A -> A) b -> A)
+    Term.addToDictionary(dict, "times", true, QuotationTerm(List(
+      // quot count
+      WordTerm("dup", List(VariableArgument(0))), // quot count count
+      LiteralTerm(1, VariableArgument(0)), // quot count count 1
+      WordTerm("icmp", List(ConstantArgument(SLECond), VariableArgument(0))), // quot count bool
+      QuotationTerm(List(
+	// quot count
+	WordTerm("drop", List(VariableArgument(0))), // quot
+	WordTerm("drop", List(ConstantArgument(QuotationType))) //
+      )),
+      QuotationTerm(List(
+	// quot count
+	LiteralTerm(1, VariableArgument(0)), // quot count1
+	WordTerm("sub", List(VariableArgument(0))), // quot count1
+	WordTerm("swap", List(ConstantArgument(QuotationType), VariableArgument(0))), // count1 quot
+	WordTerm("dup", List(ConstantArgument(QuotationType))), // count1 quot quot
+	WordTerm("apply", Nil), // count1 quot quot
+	WordTerm("swap", List(VariableArgument(0), ConstantArgument(QuotationType))), // quot count1
+	WordTerm("times", List(VariableArgument(0))) // [recursive]
+      )),
+      WordTerm("if", Nil)
+    )))
+
     Term.addToDictionary(dict, "main", true, QuotationTerm(List(
-      LiteralTerm(5, ConstantArgument(i32)),
-      WordTerm("factorial", List(ConstantArgument(i32)))
+      QuotationTerm(List(
+	LiteralTerm(5, ConstantArgument(i32)),
+	WordTerm("factorial", List(ConstantArgument(i32))),
+	WordTerm("drop", List(ConstantArgument(i32)))	
+      )),
+      LiteralTerm(3, ConstantArgument(i32)),
+      WordTerm("times", List(ConstantArgument(i32)))
     )))
 
     val module = new Module

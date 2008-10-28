@@ -172,9 +172,9 @@ class FromContLlackInst : public LlackInstruction {
 
 class SubLlackInst : public LlackInstruction {
  private:
-  const Type* t; // XXX: Make into LlackType?
+  const LlackType* t; // XXX: Make into LlackType?
  public:
- SubLlackInst(const Type* t_) : t(t_) {}
+ SubLlackInst(const LlackType* t_) : t(t_) {}
   virtual ~SubLlackInst();
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
@@ -190,9 +190,9 @@ class SelectLlackInst : public LlackInstruction {
 
 class MulLlackInst : public LlackInstruction {
  private:
-  const Type* t; // XXX: Make into LlackType?
+  const LlackType* t; // XXX: Make into LlackType?
  public:
- MulLlackInst(const Type* t_) : t(t_) {}
+ MulLlackInst(const LlackType* t_) : t(t_) {}
   virtual ~MulLlackInst();
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
@@ -200,9 +200,9 @@ class MulLlackInst : public LlackInstruction {
 class ICmpLlackInst : public LlackInstruction {
  private:
   ICmpInst::Predicate p;
-  const Type* t;
+  const LlackType* t;
  public:
- ICmpLlackInst(ICmpInst::Predicate p_, const Type* t_) : p(p_), t(t_) {}
+ ICmpLlackInst(ICmpInst::Predicate p_, const LlackType* t_) : p(p_), t(t_) {}
   virtual ~ICmpLlackInst();
   virtual void codeGen(VMCodeGenInterface* cgi);
 };

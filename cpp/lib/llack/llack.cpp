@@ -189,16 +189,18 @@ void FromContLlackInst::codeGen(VMCodeGenInterface* cgi)  {
 
 SubLlackInst::~SubLlackInst()  {}
 void SubLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  Value* b = cgi->popData(t);
-  Value* a = cgi->popData(t);
+  const Type* llvmType = cgi->getLlvmType(t);
+  Value* b = cgi->popData(llvmType);
+  Value* a = cgi->popData(llvmType);
   Value* c = cgi->addInstruction(BinaryOperator::createSub(a, b));
   cgi->pushData(c);
 }
 
 MulLlackInst::~MulLlackInst()  {}
 void MulLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  Value* b = cgi->popData(t);
-  Value* a = cgi->popData(t);
+  const Type* llvmType = cgi->getLlvmType(t);
+  Value* b = cgi->popData(llvmType);
+  Value* a = cgi->popData(llvmType);
   Value* c = cgi->addInstruction(BinaryOperator::createMul(a, b));
   cgi->pushData(c);
 }
@@ -215,8 +217,9 @@ void SelectLlackInst::codeGen(VMCodeGenInterface* cgi)  {
 
 ICmpLlackInst::~ICmpLlackInst()  {}
 void ICmpLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  Value* rhs = cgi->popData(t);
-  Value* lhs = cgi->popData(t);
+  const Type* llvmType = cgi->getLlvmType(t);
+  Value* rhs = cgi->popData(llvmType);
+  Value* lhs = cgi->popData(llvmType);
   Value* result = cgi->addInstruction(new ICmpInst(p, lhs, rhs));
   cgi->pushData(result);
 }
