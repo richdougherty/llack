@@ -68,7 +68,7 @@ const Type* VMCodeGenInterface::getLlvmType(LlackType* llackType) {
   if (LlvmLlackType* llvmLlackType = dynamic_cast<LlvmLlackType*>(llackType)) {
     return llvmLlackType->getLlvmType();
   } else if (dynamic_cast<LocationType*>(llackType) != NULL) {
-    return getContType();
+    return getLocationType();
   } else {
     // XXX: More straightforward error handling?
     assert(false && "Unknown LlvmValue type.");
@@ -92,14 +92,14 @@ SimpleVMCodeGenInterface::~SimpleVMCodeGenInterface() {}
 const TargetData* SimpleVMCodeGenInterface::getTargetData() {
   return td;
 }
-Type* SimpleVMCodeGenInterface::getContType() {
+Type* SimpleVMCodeGenInterface::getLocationType() {
   // XXX: could use actual function type; would make it
   // easier to do tail call...
   return PointerType::getUnqual(Type::Int8Ty);
 }
-Location* SimpleVMCodeGenInterface::getWordCont(Word* word) {
+Location* SimpleVMCodeGenInterface::lookupWordLocation(Word* word) {
   ConstantInt* intValue = ConstantInt::get(Type::Int32Ty, (int) word, false);
-  Value* ptrValue = builder->CreateIntToPtr(intValue, getContType());
+  Value* ptrValue = builder->CreateIntToPtr(intValue, getLocationType());
   return new Location(ptrValue);
 }
 void SimpleVMCodeGenInterface::pushData(LlackValue *v) {
@@ -175,7 +175,7 @@ LlackValue* SimpleVMCodeGenInterface::pop(Value* stack, LlackType* llackType) {
   if (dynamic_cast<LlvmLlackType*>(llackType) != NULL) {
     return new LlvmLlackValue(topValue);
   } else if (dynamic_cast<LocationType*>(llackType) != NULL) {
-    assert(topValue->getType() == getContType());
+    assert(topValue->getType() == getLocationType());
     return new Location(topValue);
   } else {
     assert(false && "Unknown LlackType");
@@ -190,7 +190,7 @@ void PushLlackInst::codeGen(VMCodeGenInterface* cgi)  {
 
 LookupLlackInst::~LookupLlackInst()  {}
 void LookupLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  Location* location = cgi->getWordCont(w);
+  Location* location = cgi->lookupWordLocation(w);
   cgi->pushData(location);
 }
 
@@ -434,16 +434,16 @@ ProgramVMCodeGenInterface::~ProgramVMCodeGenInterface() {}
 const TargetData* ProgramVMCodeGenInterface::getTargetData() {
   return pw->getExecutionEngine()->getTargetData();
 }
-Type* ProgramVMCodeGenInterface::getContType() {
+Type* ProgramVMCodeGenInterface::getLocationType() {
   // XXX: could use actual function type; would make it
   // easier to do tail call...
   return PointerType::getUnqual(Type::Int8Ty);
 }
-Location* ProgramVMCodeGenInterface::getWordCont(Word* word) {
+Location* ProgramVMCodeGenInterface::lookupWordLocation(Word* word) {
   ProgramWriter::Location location = pw->getWordLocation(word);
   assert(location != NULL);
   ConstantInt* intValue = ConstantInt::get(Type::Int32Ty, (int) location, false);
-  Value* ptrValue = builder->CreateIntToPtr(intValue, getContType());
+  Value* ptrValue = builder->CreateIntToPtr(intValue, getLocationType());
   return new Location(ptrValue);
 }
 void ProgramVMCodeGenInterface::pushData(LlackValue *v) {
@@ -521,7 +521,7 @@ LlackValue* ProgramVMCodeGenInterface::pop(Value* stack, LlackType* llackType) {
   if (dynamic_cast<LlvmLlackType*>(llackType) != NULL) {
     return new LlvmLlackValue(topValue);
   } else if (dynamic_cast<LocationType*>(llackType) != NULL) {
-    assert(topValue->getType() == getContType());
+    assert(topValue->getType() == getLocationType());
     return new Location(topValue);
   } else {
     assert(false && "Unknown LlackType");

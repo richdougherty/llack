@@ -119,10 +119,10 @@ class VMCodeGenInterface {
   virtual Location* popCont() = 0;
   virtual Instruction* addInstruction(Instruction* inst) = 0;
 
-  virtual Location* getWordCont(Word* word) = 0; // XXX: Rename to 'lookup'?
+  virtual Location* lookupWordLocation(Word* word) = 0; // XXX: Rename to 'lookup'?
 
   // Conversion between LLVM and Llack types and values
-  virtual Type* getContType() = 0; // XXX: Rename to 'getLlvmLocationType'?
+  virtual Type* getLocationType() = 0; // XXX: Rename to 'getLlvmLocationType'?
   const Type* getLlvmType(LlackType* llackType);
   Value* getLlvmValue(LlackValue* llackValue);
 };
@@ -146,8 +146,8 @@ class SimpleVMCodeGenInterface : public VMCodeGenInterface {
   virtual void pushCont(Location* w);
   virtual Location* popCont();
   virtual Instruction* addInstruction(Instruction* inst);
-  virtual Type* getContType();
-  virtual Location* getWordCont(Word* word);
+  virtual Type* getLocationType();
+  virtual Location* lookupWordLocation(Word* word);
  private:
   Type* getStackType();
   Type* getVMStateType();
@@ -302,8 +302,8 @@ class ProgramVMCodeGenInterface : public VMCodeGenInterface {
   virtual void pushCont(Location* w);
   virtual Location* popCont();
   virtual Instruction* addInstruction(Instruction* inst);
-  virtual Type* getContType();
-  virtual Location* getWordCont(Word* word);
+  virtual Type* getLocationType();
+  virtual Location* lookupWordLocation(Word* word);
  private:
   Type* getStackType();
   Type* getVMStateType();
