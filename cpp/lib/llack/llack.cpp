@@ -64,10 +64,10 @@ Word* Word::Create(const std::string& name, LlackModule* mod) {
 
 VMCodeGenInterface::~VMCodeGenInterface() {}
 
-const Type* VMCodeGenInterface::getLlvmType(const LlackType* llackType) {
-  if (const LlvmLlackType* llvmLlackType = dynamic_cast<const LlvmLlackType*>(llackType)) {
+const Type* VMCodeGenInterface::getLlvmType(LlackType* llackType) {
+  if (LlvmLlackType* llvmLlackType = dynamic_cast<LlvmLlackType*>(llackType)) {
     return llvmLlackType->getLlvmType();
-  } else if (dynamic_cast<const QuotationType*>(llackType) != NULL) {
+  } else if (dynamic_cast<LocationType*>(llackType) != NULL) {
     return getContType();
   } else {
     // XXX: More straightforward error handling?
@@ -79,8 +79,8 @@ const Type* VMCodeGenInterface::getLlvmType(const LlackType* llackType) {
 Value* VMCodeGenInterface::getLlvmValue(LlackValue* llackValue) {
   if (LlvmLlackValue* llvmLlackValue = dynamic_cast<LlvmLlackValue*>(llackValue)) {
     return llvmLlackValue->getLlvmValue();
-  } else if (Word* word = dynamic_cast<Word*>(llackValue)) {
-    return getWordCont(word);
+  } else if (Location* location = dynamic_cast<Location*>(llackValue)) {
+    return location->getLlvmValue();
   } else {
     // XXX: More straightforward error handling?
     assert(false && "Unknown LlvmValue type.");
@@ -97,28 +97,31 @@ Type* SimpleVMCodeGenInterface::getContType() {
   // easier to do tail call...
   return PointerType::getUnqual(Type::Int8Ty);
 }
-Value* SimpleVMCodeGenInterface::getWordCont(Word* word) {
+Location* SimpleVMCodeGenInterface::getWordCont(Word* word) {
   ConstantInt* intValue = ConstantInt::get(Type::Int32Ty, (int) word, false);
   Value* ptrValue = builder->CreateIntToPtr(intValue, getContType());
-  return ptrValue;
+  return new Location(ptrValue);
 }
-void SimpleVMCodeGenInterface::pushData(Value *v) {
+void SimpleVMCodeGenInterface::pushData(LlackValue *v) {
   push(getDataStack(), v);
 }
-Value* SimpleVMCodeGenInterface::popData(const Type *t) {
+LlackValue* SimpleVMCodeGenInterface::popData(LlackType *t) {
   return pop(getDataStack(), t);
 }
-void SimpleVMCodeGenInterface::pushRetain(Value *v) {
+void SimpleVMCodeGenInterface::pushRetain(LlackValue *v) {
   push(getRetainStack(), v);
 }
-Value* SimpleVMCodeGenInterface::popRetain(Type *t) {
+LlackValue* SimpleVMCodeGenInterface::popRetain(LlackType *t) {
   return pop(getRetainStack(), t);
 }
-void SimpleVMCodeGenInterface::pushCont(Value *v) {
-  push(getContStack(), v);
+void SimpleVMCodeGenInterface::pushCont(Location* location) {
+  push(getContStack(), location);
 }
-Value* SimpleVMCodeGenInterface::popCont() {
-  return pop(getContStack(), getContType());
+Location* SimpleVMCodeGenInterface::popCont() {
+  LlackValue* v = pop(getContStack(), new LocationType());
+  Location* location = dynamic_cast<Location*>(v);
+  assert(location != NULL && "Popped non-location from cont stack.");
+  return location;
 }
 Instruction* SimpleVMCodeGenInterface::addInstruction(Instruction* inst) {
   return builder->Insert(inst);
@@ -143,7 +146,8 @@ Value* SimpleVMCodeGenInterface::getRetainStack() {
 Value* SimpleVMCodeGenInterface::getContStack() {
   return builder->CreateStructGEP(vmStatePtr, 2);
 }
-void SimpleVMCodeGenInterface::push(Value* stack, Value* v) {
+void SimpleVMCodeGenInterface::push(Value* stack, LlackValue* llackValue) {
+  Value* v = getLlvmValue(llackValue);
   const Type *t = v->getType();
 
   Value *top = builder->CreateLoad(stack);
@@ -156,7 +160,8 @@ void SimpleVMCodeGenInterface::push(Value* stack, Value* v) {
   Value *newTop = builder->CreateGEP(top, topDelta);
   builder->CreateStore(newTop, stack);
 }
-Value* SimpleVMCodeGenInterface::pop(Value* stack, const Type* t) {
+LlackValue* SimpleVMCodeGenInterface::pop(Value* stack, LlackType* llackType) {
+  const Type* t = getLlvmType(llackType);
   int elementSize = td->getTypeStoreSize(t);
   ConstantInt *topDelta = ConstantInt::get(Type::Int32Ty, -1 * elementSize, true);
   // move top down
@@ -166,77 +171,87 @@ Value* SimpleVMCodeGenInterface::pop(Value* stack, const Type* t) {
   // load value
   Value *castTop = builder->CreateBitCast(newTop, PointerType::getUnqual(t));
   Value *topValue = builder->CreateLoad(castTop);
-  return topValue;
+  
+  if (dynamic_cast<LlvmLlackType*>(llackType) != NULL) {
+    return new LlvmLlackValue(topValue);
+  } else if (dynamic_cast<LocationType*>(llackType) != NULL) {
+    assert(topValue->getType() == getContType());
+    return new Location(topValue);
+  } else {
+    assert(false && "Unknown LlackType");
+    return NULL;
+  }
 }
 
 PushLlackInst::~PushLlackInst()  {}
 void PushLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  Value* llvmValue = cgi->getLlvmValue(v);
-  cgi->pushData(llvmValue);
+  cgi->pushData(v);
+}
+
+LookupLlackInst::~LookupLlackInst()  {}
+void LookupLlackInst::codeGen(VMCodeGenInterface* cgi)  {
+  Location* location = cgi->getWordCont(w);
+  cgi->pushData(location);
 }
 
 ToContLlackInst::~ToContLlackInst()  {}
 void ToContLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  Value* v = cgi->popData(cgi->getContType());
-  cgi->pushCont(v);
+  Location* location = dynamic_cast<Location*>(cgi->popData(new LocationType()));
+  assert(location != NULL);
+  cgi->pushCont(location);
 }
 
 FromContLlackInst::~FromContLlackInst()  {}
 void FromContLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  Value* v = cgi->popCont();
-  cgi->pushData(v);
+  Location* location = cgi->popCont();
+  cgi->pushData(location);
 }
 
 SubLlackInst::~SubLlackInst()  {}
 void SubLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  const Type* llvmType = cgi->getLlvmType(t);
-  Value* b = cgi->popData(llvmType);
-  Value* a = cgi->popData(llvmType);
+  Value* b = cgi->getLlvmValue(cgi->popData(t));
+  Value* a = cgi->getLlvmValue(cgi->popData(t));
   Value* c = cgi->addInstruction(BinaryOperator::createSub(a, b));
-  cgi->pushData(c);
+  cgi->pushData(new LlvmLlackValue(c));
 }
 
 MulLlackInst::~MulLlackInst()  {}
 void MulLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  const Type* llvmType = cgi->getLlvmType(t);
-  Value* b = cgi->popData(llvmType);
-  Value* a = cgi->popData(llvmType);
+  Value* b = cgi->getLlvmValue(cgi->popData(t));
+  Value* a = cgi->getLlvmValue(cgi->popData(t));
   Value* c = cgi->addInstruction(BinaryOperator::createMul(a, b));
-  cgi->pushData(c);
+  cgi->pushData(new LlvmLlackValue(c));
 }
 
 SelectLlackInst::~SelectLlackInst()  {}
 void SelectLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  const Type* llvmType = cgi->getLlvmType(t);
-  Value* falseValue = cgi->popData(llvmType);
-  Value* trueValue = cgi->popData(llvmType);
-  Value* boolean = cgi->popData(Type::Int1Ty);
+  Value* falseValue = cgi->getLlvmValue(cgi->popData(t));
+  Value* trueValue = cgi->getLlvmValue(cgi->popData(t));
+  Value* boolean = cgi->getLlvmValue(cgi->popData(new LlvmLlackType(Type::Int1Ty)));
   Value* result = cgi->addInstruction(SelectInst::Create(boolean, trueValue, falseValue));
-  cgi->pushData(result);
+  cgi->pushData(new LlvmLlackValue(result));
 }
 
 ICmpLlackInst::~ICmpLlackInst()  {}
 void ICmpLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  const Type* llvmType = cgi->getLlvmType(t);
-  Value* rhs = cgi->popData(llvmType);
-  Value* lhs = cgi->popData(llvmType);
+  Value* lhs = cgi->getLlvmValue(cgi->popData(t));
+  Value* rhs = cgi->getLlvmValue(cgi->popData(t));
   Value* result = cgi->addInstruction(new ICmpInst(p, lhs, rhs));
-  cgi->pushData(result);
+  cgi->pushData(new LlvmLlackValue(result));
 }
 
 ShuffleLlackInst::~ShuffleLlackInst()  {}
 void ShuffleLlackInst::codeGen(VMCodeGenInterface* cgi)  {
-  std::vector<Value*> values;
+  std::vector<LlackValue*> values;
   for (std::vector<LlackType*>::iterator iter = consumption.begin(); iter < consumption.end(); ++iter) {
-    LlackType* llackType = *iter;
-    const Type* llvmType = cgi->getLlvmType(llackType);
-    Value* v = cgi->popData(llvmType);
+    LlackType* t = *iter;
+    LlackValue* v = cgi->popData(t);
     values.push_back(v);
   }
   std::reverse(values.begin(), values.end()); // XXX: Could avoid this for efficiency.
   for (std::vector<int>::iterator iter = production.begin(); iter < production.end(); ++iter) {
     int index = *iter;
-    Value* v = values[index];
+    LlackValue* v = values[index];
     cgi->pushData(v);
   }
 }
@@ -424,30 +439,33 @@ Type* ProgramVMCodeGenInterface::getContType() {
   // easier to do tail call...
   return PointerType::getUnqual(Type::Int8Ty);
 }
-Value* ProgramVMCodeGenInterface::getWordCont(Word* word) {
+Location* ProgramVMCodeGenInterface::getWordCont(Word* word) {
   ProgramWriter::Location location = pw->getWordLocation(word);
   assert(location != NULL);
   ConstantInt* intValue = ConstantInt::get(Type::Int32Ty, (int) location, false);
   Value* ptrValue = builder->CreateIntToPtr(intValue, getContType());
-  return ptrValue;
+  return new Location(ptrValue);
 }
-void ProgramVMCodeGenInterface::pushData(Value *v) {
+void ProgramVMCodeGenInterface::pushData(LlackValue *v) {
   push(getDataStack(), v);
 }
-Value* ProgramVMCodeGenInterface::popData(const Type *t) {
+LlackValue* ProgramVMCodeGenInterface::popData(LlackType *t) {
   return pop(getDataStack(), t);
 }
-void ProgramVMCodeGenInterface::pushRetain(Value *v) {
+void ProgramVMCodeGenInterface::pushRetain(LlackValue *v) {
   push(getRetainStack(), v);
 }
-Value* ProgramVMCodeGenInterface::popRetain(Type *t) {
+LlackValue* ProgramVMCodeGenInterface::popRetain(LlackType *t) {
   return pop(getRetainStack(), t);
 }
-void ProgramVMCodeGenInterface::pushCont(Value *v) {
+void ProgramVMCodeGenInterface::pushCont(Location *v) {
   push(getContStack(), v);
 }
-Value* ProgramVMCodeGenInterface::popCont() {
-  return pop(getContStack(), getContType());
+Location* ProgramVMCodeGenInterface::popCont() {
+  LlackValue* v = pop(getContStack(), new LocationType());
+  Location* location = dynamic_cast<Location*>(v);
+  assert(location != NULL && "Popped non-location from cont stack.");
+  return location;
 }
 Instruction* ProgramVMCodeGenInterface::addInstruction(Instruction* inst) {
   return builder->Insert(inst);
@@ -472,7 +490,8 @@ Value* ProgramVMCodeGenInterface::getRetainStack() {
 Value* ProgramVMCodeGenInterface::getContStack() {
   return builder->CreateStructGEP(vmStatePtr, 2);
 }
-void ProgramVMCodeGenInterface::push(Value* stack, Value* v) {
+void ProgramVMCodeGenInterface::push(Value* stack, LlackValue* llackValue) {
+  Value* v = getLlvmValue(llackValue);
   const Type *t = v->getType();
 
   Value *top = builder->CreateLoad(stack);
@@ -486,8 +505,9 @@ void ProgramVMCodeGenInterface::push(Value* stack, Value* v) {
   Value *newTop = builder->CreateGEP(top, topDelta);
   builder->CreateStore(newTop, stack);
 }
-Value* ProgramVMCodeGenInterface::pop(Value* stack, const Type* t) {
+LlackValue* ProgramVMCodeGenInterface::pop(Value* stack, LlackType* llackType) {
   const TargetData* td = pw->getExecutionEngine()->getTargetData();
+  const Type* t = getLlvmType(llackType);
   int elementSize = td->getTypeStoreSize(t);
   ConstantInt *topDelta = ConstantInt::get(Type::Int32Ty, -1 * elementSize, true);
   // move top down
@@ -497,5 +517,14 @@ Value* ProgramVMCodeGenInterface::pop(Value* stack, const Type* t) {
   // load value
   Value *castTop = builder->CreateBitCast(newTop, PointerType::getUnqual(t));
   Value *topValue = builder->CreateLoad(castTop);
-  return topValue;
+  
+  if (dynamic_cast<LlvmLlackType*>(llackType) != NULL) {
+    return new LlvmLlackValue(topValue);
+  } else if (dynamic_cast<LocationType*>(llackType) != NULL) {
+    assert(topValue->getType() == getContType());
+    return new Location(topValue);
+  } else {
+    assert(false && "Unknown LlackType");
+    return NULL;
+  }
 }

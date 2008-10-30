@@ -65,7 +65,7 @@ class LlvmLlackType : public LlackType {
   LlvmLlackType(const Type* llvmType_) : llvmType(llvmType_) {}
   const Type* getLlvmType() const;
 };
-class QuotationType : public LlackType {}; // XXX: Make singleton?
+class LocationType : public LlackType {}; // XXX: Make singleton?
 
 // XXX: Anchor.
 class LlackValue {
@@ -85,15 +85,23 @@ class LlvmLlackValue : public LlackValue {
   }
 };
 
-class Word : public LlackValue {
+class Location : public LlackValue {
+ private:
+  Value* llvmValue;
+ public:
+  Location(Value* llvmValue_) : llvmValue(llvmValue_) {}
+  Value* getLlvmValue() { return llvmValue; }
+  virtual LlackType* getLlackType() {
+    return new LocationType();
+  }
+};
+
+class Word {
  public:
   Word();
   std::string name;
   std::vector<LlackInstruction*> instructions;
   static Word* Create(const std::string& name, LlackModule* mod);
-  virtual LlackType* getLlackType() {
-    return new QuotationType();
-  }
 };
 
 class VMCodeGenInterface {
@@ -101,16 +109,21 @@ class VMCodeGenInterface {
   // XXX: Needs anchor?
   virtual ~VMCodeGenInterface();
   virtual const TargetData* getTargetData() = 0;
-  virtual Type* getContType() = 0;
-  virtual Value* getWordCont(Word* word) = 0;
-  virtual void pushData(Value *v) = 0;
-  virtual Value* popData(const Type *t) = 0;
-  virtual void pushRetain(Value *v) = 0;
-  virtual Value* popRetain(Type *t) = 0;
-  virtual void pushCont(Value *v) = 0;
-  virtual Value* popCont() = 0;
+
+  // Code generation
+  virtual void pushData(LlackValue *v) = 0;
+  virtual LlackValue* popData(LlackType* t) = 0;
+  virtual void pushRetain(LlackValue* v) = 0;
+  virtual LlackValue* popRetain(LlackType* t) = 0;
+  virtual void pushCont(Location* w) = 0;
+  virtual Location* popCont() = 0;
   virtual Instruction* addInstruction(Instruction* inst) = 0;
-  const Type* getLlvmType(const LlackType* llackType);
+
+  virtual Location* getWordCont(Word* word) = 0; // XXX: Rename to 'lookup'?
+
+  // Conversion between LLVM and Llack types and values
+  virtual Type* getContType() = 0; // XXX: Rename to 'getLlvmLocationType'?
+  const Type* getLlvmType(LlackType* llackType);
   Value* getLlvmValue(LlackValue* llackValue);
 };
 
@@ -126,23 +139,23 @@ class SimpleVMCodeGenInterface : public VMCodeGenInterface {
   {}
   virtual ~SimpleVMCodeGenInterface();
   virtual const TargetData* getTargetData();
-  virtual Type* getContType();
-  virtual Value* getWordCont(Word* word);
-  virtual void pushData(Value *v);
-  virtual Value* popData(const Type *t);
-  virtual void pushRetain(Value *v);
-  virtual Value* popRetain(Type *t);
-  virtual void pushCont(Value *v);
-  virtual Value* popCont();
+  virtual void pushData(LlackValue *v);
+  virtual LlackValue* popData(LlackType* t);
+  virtual void pushRetain(LlackValue* v);
+  virtual LlackValue* popRetain(LlackType* t);
+  virtual void pushCont(Location* w);
+  virtual Location* popCont();
   virtual Instruction* addInstruction(Instruction* inst);
+  virtual Type* getContType();
+  virtual Location* getWordCont(Word* word);
  private:
   Type* getStackType();
   Type* getVMStateType();
   Value* getDataStack();
   Value* getRetainStack();
   Value* getContStack();
-  void push(Value* stack, Value* v);
-  Value* pop(Value* stack, const Type* t);
+  void push(Value* stack, LlackValue* v);
+  LlackValue* pop(Value* stack, LlackType* t);
 };
 
 class PushLlackInst : public LlackInstruction {
@@ -153,6 +166,17 @@ class PushLlackInst : public LlackInstruction {
    : v(v_)
   {}
   virtual ~PushLlackInst();
+  virtual void codeGen(VMCodeGenInterface* cgi);
+};
+
+class LookupLlackInst : public LlackInstruction {
+ private:
+  Word* w;
+ public:
+ LookupLlackInst(Word* w_)
+   : w(w_)
+  {}
+  virtual ~LookupLlackInst();
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
 
@@ -172,27 +196,27 @@ class FromContLlackInst : public LlackInstruction {
 
 class SubLlackInst : public LlackInstruction {
  private:
-  const LlackType* t; // XXX: Make into LlackType?
+  LlackType* t; // XXX: Make into LlackType?
  public:
- SubLlackInst(const LlackType* t_) : t(t_) {}
+ SubLlackInst(LlackType* t_) : t(t_) {}
   virtual ~SubLlackInst();
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
 
 class SelectLlackInst : public LlackInstruction {
  private:
-  const LlackType* t;
+  LlackType* t;
  public:
- SelectLlackInst(const LlackType* t_) : t(t_) {}
+ SelectLlackInst(LlackType* t_) : t(t_) {}
   virtual ~SelectLlackInst();
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
 
 class MulLlackInst : public LlackInstruction {
  private:
-  const LlackType* t; // XXX: Make into LlackType?
+  LlackType* t; // XXX: Make into LlackType?
  public:
- MulLlackInst(const LlackType* t_) : t(t_) {}
+ MulLlackInst(LlackType* t_) : t(t_) {}
   virtual ~MulLlackInst();
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
@@ -200,9 +224,9 @@ class MulLlackInst : public LlackInstruction {
 class ICmpLlackInst : public LlackInstruction {
  private:
   ICmpInst::Predicate p;
-  const LlackType* t;
+  LlackType* t;
  public:
- ICmpLlackInst(ICmpInst::Predicate p_, const LlackType* t_) : p(p_), t(t_) {}
+ ICmpLlackInst(ICmpInst::Predicate p_, LlackType* t_) : p(p_), t(t_) {}
   virtual ~ICmpLlackInst();
   virtual void codeGen(VMCodeGenInterface* cgi);
 };
@@ -271,23 +295,23 @@ class ProgramVMCodeGenInterface : public VMCodeGenInterface {
     pw(pw_), vmStatePtr(vmStatePtr_), builder(builder_) {}
   virtual ~ProgramVMCodeGenInterface();
   virtual const TargetData* getTargetData();
-  virtual Type* getContType();
-  virtual Value* getWordCont(Word* word);
-  virtual void pushData(Value *v);
-  virtual Value* popData(const Type *t);
-  virtual void pushRetain(Value *v);
-  virtual Value* popRetain(Type *t);
-  virtual void pushCont(Value *v);
-  virtual Value* popCont();
+  virtual void pushData(LlackValue *v);
+  virtual LlackValue* popData(LlackType* t);
+  virtual void pushRetain(LlackValue* v);
+  virtual LlackValue* popRetain(LlackType* t);
+  virtual void pushCont(Location* w);
+  virtual Location* popCont();
   virtual Instruction* addInstruction(Instruction* inst);
+  virtual Type* getContType();
+  virtual Location* getWordCont(Word* word);
  private:
   Type* getStackType();
   Type* getVMStateType();
   Value* getDataStack();
   Value* getRetainStack();
   Value* getContStack();
-  void push(Value* stack, Value* v);
-  Value* pop(Value* stack, const Type* t);
+  void push(Value* stack, LlackValue* v);
+  LlackValue* pop(Value* stack, LlackType* t);
 };
 
 
