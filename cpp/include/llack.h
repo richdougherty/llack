@@ -127,6 +127,48 @@ class VMCodeGenInterface {
   Value* getLlvmValue(LlackValue* llackValue);
 };
 
+class StackCodeGen {
+ public:
+  virtual ~StackCodeGen();
+  virtual void push(LlackValue* v) = 0;
+  virtual LlackValue* pop(LlackType* t) = 0;
+  virtual void flush() = 0;
+};
+
+class ImmediateStackCodeGen : public StackCodeGen {
+ private:
+  VMCodeGenInterface* cgi;
+  Value* stackAddress;
+ public:
+  ImmediateStackCodeGen(VMCodeGenInterface* cgi_, Value* stackAddress_) : cgi(cgi_), stackAddress(stackAddress_) {}
+  virtual void push(LlackValue* v);
+  virtual LlackValue* pop(LlackType* t);
+  virtual void flush();
+};
+
+/*
+class CachingStackCodeGen {
+ private:
+  /// The address that holds the stack's state, which is currently just a pointer
+  /// to the top of the stack.
+  Value* address;
+  /// The address of the top of the stack (*address).
+  Value* originalTop;
+  /// 
+  //int topElementDelta;
+  int byteOffset;
+  std::vector<LlackValue*> production;
+  const Type* locationType;
+  void init();
+ public:
+  CachingStackCodeGen(Value* address_, const Type* locationType_) : address(address_), locationType(locationType_) {
+    init();
+  }
+  void push(LlackValue* v);
+  LlackValue* pop(LlackType* t);
+  void flush();
+};*/
+
 class SimpleVMCodeGenInterface : public VMCodeGenInterface {
  private:
   Module* mod;
@@ -290,9 +332,12 @@ class ProgramVMCodeGenInterface : public VMCodeGenInterface {
   ProgramWriter* pw;
   Value* vmStatePtr;
   IRBuilder* builder;
+  StackCodeGen* dataStackCodeGen;
+  StackCodeGen* retainStackCodeGen;
+  StackCodeGen* contStackCodeGen;
  public:
   ProgramVMCodeGenInterface(ProgramWriter* pw_, Value* vmStatePtr_, IRBuilder* builder_):
-    pw(pw_), vmStatePtr(vmStatePtr_), builder(builder_) {}
+    pw(pw_), vmStatePtr(vmStatePtr_), builder(builder_), dataStackCodeGen(NULL), retainStackCodeGen(NULL), contStackCodeGen(NULL) {}
   virtual ~ProgramVMCodeGenInterface();
   virtual const TargetData* getTargetData();
   virtual void pushData(LlackValue *v);
@@ -307,11 +352,11 @@ class ProgramVMCodeGenInterface : public VMCodeGenInterface {
  private:
   Type* getStackType();
   Type* getVMStateType();
-  Value* getDataStack();
-  Value* getRetainStack();
-  Value* getContStack();
-  void push(Value* stack, LlackValue* v);
-  LlackValue* pop(Value* stack, LlackType* t);
+  StackCodeGen* getDataStack();
+  StackCodeGen* getRetainStack();
+  StackCodeGen* getContStack();
+  
+  StackCodeGen* getStack(StackCodeGen*& field, int index);
 };
 
 

@@ -183,6 +183,50 @@ LlackValue* SimpleVMCodeGenInterface::pop(Value* stack, LlackType* llackType) {
   }
 }
 
+StackCodeGen::~StackCodeGen() {}
+
+void ImmediateStackCodeGen::push(LlackValue* llackValue) {
+  Value* v = cgi->getLlvmValue(llackValue);
+  const Type *t = v->getType();
+
+  Value *top = cgi->addInstruction(new LoadInst(stackAddress));
+  Value *castTop = cgi->addInstruction(new BitCastInst(top, PointerType::getUnqual(t)));
+  cgi->addInstruction(new StoreInst(v, castTop));
+
+  // XXX: align stack
+  int elementSize = cgi->getTargetData()->getTypeStoreSize(t);
+  ConstantInt *topDelta = ConstantInt::get(Type::Int32Ty, elementSize, true);
+  Value *newTop = cgi->addInstruction(GetElementPtrInst::Create(top, topDelta));
+  cgi->addInstruction(new StoreInst(newTop, stackAddress));
+}
+
+LlackValue* ImmediateStackCodeGen::pop(LlackType* llackType) {
+  const Type* t = cgi->getLlvmType(llackType);
+  int elementSize = cgi->getTargetData()->getTypeStoreSize(t);
+  ConstantInt *topDelta = ConstantInt::get(Type::Int32Ty, -1 * elementSize, true);
+  // move top down
+  Value *top = cgi->addInstruction(new LoadInst(stackAddress));
+  Value *newTop = cgi->addInstruction(GetElementPtrInst::Create(top, topDelta));
+  cgi->addInstruction(new StoreInst(newTop, stackAddress));
+  // load value
+  Value *castTop = cgi->addInstruction(new BitCastInst(newTop, PointerType::getUnqual(t)));
+  Value *topValue = cgi->addInstruction(new LoadInst(castTop));
+  
+  if (dynamic_cast<LlvmLlackType*>(llackType) != NULL) {
+    return new LlvmLlackValue(topValue);
+  } else if (dynamic_cast<LocationType*>(llackType) != NULL) {
+    assert(topValue->getType() == cgi->getLocationType());
+    return new Location(topValue);
+  } else {
+    assert(false && "Unknown LlackType");
+    return NULL;
+  }
+}
+
+void ImmediateStackCodeGen::flush() {
+  // Nop, since all code is generated immediately.
+}
+
 PushLlackInst::~PushLlackInst()  {}
 void PushLlackInst::codeGen(VMCodeGenInterface* cgi)  {
   cgi->pushData(v);
@@ -402,6 +446,12 @@ ProgramWriter::ProgramWriter(int size, Module* module, ExecutionEngine* ee) {
 
 ProgramWriter::~ProgramWriter() {
   // XXX: Delete all interpretables.
+  ProgramWriter* pw;
+  Value* vmStatePtr;
+  IRBuilder* builder;
+  if (dataStackCodeGen != NULL) delete dataStackCodeGen;
+  if (retainStackCodeGen != NULL) delete retainStackCodeGen;
+  if (contStackCodeGen != NULL) delete contStackCodeGen;
   delete[] first;
 }
 
@@ -447,22 +497,22 @@ Location* ProgramVMCodeGenInterface::lookupWordLocation(Word* word) {
   return new Location(ptrValue);
 }
 void ProgramVMCodeGenInterface::pushData(LlackValue *v) {
-  push(getDataStack(), v);
+  getDataStack()->push(v);
 }
 LlackValue* ProgramVMCodeGenInterface::popData(LlackType *t) {
-  return pop(getDataStack(), t);
+  return getDataStack()->pop(t);
 }
 void ProgramVMCodeGenInterface::pushRetain(LlackValue *v) {
-  push(getRetainStack(), v);
+  getRetainStack()->push(v);
 }
 LlackValue* ProgramVMCodeGenInterface::popRetain(LlackType *t) {
-  return pop(getRetainStack(), t);
+  return getRetainStack()->pop(t);
 }
 void ProgramVMCodeGenInterface::pushCont(Location *v) {
-  push(getContStack(), v);
+  getContStack()->push(v);
 }
 Location* ProgramVMCodeGenInterface::popCont() {
-  LlackValue* v = pop(getContStack(), new LocationType());
+  LlackValue* v = getContStack()->pop(new LocationType());
   Location* location = dynamic_cast<Location*>(v);
   assert(location != NULL && "Popped non-location from cont stack.");
   return location;
@@ -481,50 +531,20 @@ Type* ProgramVMCodeGenInterface::getVMStateType() {
 			 NULL
 			 );
 }
-Value* ProgramVMCodeGenInterface::getDataStack() {
-  return builder->CreateStructGEP(vmStatePtr, 0);
-}
-Value* ProgramVMCodeGenInterface::getRetainStack() {
-  return builder->CreateStructGEP(vmStatePtr, 1);
-}
-Value* ProgramVMCodeGenInterface::getContStack() {
-  return builder->CreateStructGEP(vmStatePtr, 2);
-}
-void ProgramVMCodeGenInterface::push(Value* stack, LlackValue* llackValue) {
-  Value* v = getLlvmValue(llackValue);
-  const Type *t = v->getType();
-
-  Value *top = builder->CreateLoad(stack);
-  Value *castTop = builder->CreateBitCast(top, PointerType::getUnqual(t));
-  builder->CreateStore(v, castTop);
-
-  // XXX: align stack
-  const TargetData* td = pw->getExecutionEngine()->getTargetData();
-  int elementSize = td->getTypeStoreSize(t);
-  ConstantInt *topDelta = ConstantInt::get(Type::Int32Ty, elementSize, true);
-  Value *newTop = builder->CreateGEP(top, topDelta);
-  builder->CreateStore(newTop, stack);
-}
-LlackValue* ProgramVMCodeGenInterface::pop(Value* stack, LlackType* llackType) {
-  const TargetData* td = pw->getExecutionEngine()->getTargetData();
-  const Type* t = getLlvmType(llackType);
-  int elementSize = td->getTypeStoreSize(t);
-  ConstantInt *topDelta = ConstantInt::get(Type::Int32Ty, -1 * elementSize, true);
-  // move top down
-  Value *top = builder->CreateLoad(stack);
-  Value *newTop = builder->CreateGEP(top, topDelta);
-  builder->CreateStore(newTop, stack);
-  // load value
-  Value *castTop = builder->CreateBitCast(newTop, PointerType::getUnqual(t));
-  Value *topValue = builder->CreateLoad(castTop);
-  
-  if (dynamic_cast<LlvmLlackType*>(llackType) != NULL) {
-    return new LlvmLlackValue(topValue);
-  } else if (dynamic_cast<LocationType*>(llackType) != NULL) {
-    assert(topValue->getType() == getLocationType());
-    return new Location(topValue);
-  } else {
-    assert(false && "Unknown LlackType");
-    return NULL;
+StackCodeGen* ProgramVMCodeGenInterface::getStack(StackCodeGen*& field, int vmStateIndex) {
+  if (field == NULL) {
+    Value* stackAddress = builder->CreateStructGEP(vmStatePtr, vmStateIndex);
+    field = new ImmediateStackCodeGen(this, stackAddress);
   }
+  return field;
+}
+
+StackCodeGen* ProgramVMCodeGenInterface::getDataStack() {
+  return getStack(dataStackCodeGen, 0);
+}
+StackCodeGen* ProgramVMCodeGenInterface::getRetainStack() {
+  return getStack(retainStackCodeGen, 1);
+}
+StackCodeGen* ProgramVMCodeGenInterface::getContStack() {
+  return getStack(contStackCodeGen, 2);
 }
