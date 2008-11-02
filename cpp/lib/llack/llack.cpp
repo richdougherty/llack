@@ -182,6 +182,7 @@ LlackValue* SimpleVMCodeGenInterface::pop(Value* stack, LlackType* llackType) {
     return NULL;
   }
 }
+void SimpleVMCodeGenInterface::flush() {}
 
 StackCodeGen::~StackCodeGen() {}
 
@@ -225,6 +226,37 @@ LlackValue* ImmediateStackCodeGen::pop(LlackType* llackType) {
 
 void ImmediateStackCodeGen::flush() {
   // Nop, since all code is generated immediately.
+}
+
+CachingStackCodeGen::CachingStackCodeGen(VMCodeGenInterface* cgi_, Value* stackAddress_) {
+  delegate = new ImmediateStackCodeGen(cgi_, stackAddress_);
+}
+
+CachingStackCodeGen::~CachingStackCodeGen() {
+  delete delegate;
+}
+
+void CachingStackCodeGen::push(LlackValue* llackValue) {
+  cache.push_back(llackValue);
+}
+
+LlackValue* CachingStackCodeGen::pop(LlackType* llackType) {
+  if (cache.empty()) {
+    return delegate->pop(llackType);
+  } else {
+    LlackValue* poppedValue = cache[cache.size() - 1];
+    cache.pop_back();
+    return poppedValue;
+  }
+}
+
+void CachingStackCodeGen::flush() {
+  // Push all items in cache
+  for (std::vector<LlackValue*>::reverse_iterator iter = cache.rbegin(); iter < cache.rend(); ++iter) {
+    LlackValue* v = *iter;
+    delegate->push(v);
+  }
+  delegate->flush();
 }
 
 PushLlackInst::~PushLlackInst()  {}
@@ -368,6 +400,7 @@ void WordInterpretable::initFunction() {
   
   VMCodeGenInterface* cgi = pw->getVMCodeGenInterface(vmStatePtr, &builder);
   codeGen(NULL, cgi);
+  cgi->flush();
   builder.CreateRetVoid();
 }
 
@@ -446,12 +479,6 @@ ProgramWriter::ProgramWriter(int size, Module* module, ExecutionEngine* ee) {
 
 ProgramWriter::~ProgramWriter() {
   // XXX: Delete all interpretables.
-  ProgramWriter* pw;
-  Value* vmStatePtr;
-  IRBuilder* builder;
-  if (dataStackCodeGen != NULL) delete dataStackCodeGen;
-  if (retainStackCodeGen != NULL) delete retainStackCodeGen;
-  if (contStackCodeGen != NULL) delete contStackCodeGen;
   delete[] first;
 }
 
@@ -480,7 +507,12 @@ VMCodeGenInterface* ProgramWriter::getVMCodeGenInterface(Value* vmStatePtr, IRBu
 
 
 
-ProgramVMCodeGenInterface::~ProgramVMCodeGenInterface() {}
+ProgramVMCodeGenInterface::~ProgramVMCodeGenInterface() {
+  if (dataStackCodeGen != NULL) delete dataStackCodeGen;
+  if (retainStackCodeGen != NULL) delete retainStackCodeGen;
+  if (contStackCodeGen != NULL) delete contStackCodeGen;
+}
+
 const TargetData* ProgramVMCodeGenInterface::getTargetData() {
   return pw->getExecutionEngine()->getTargetData();
 }
@@ -538,6 +570,13 @@ StackCodeGen* ProgramVMCodeGenInterface::getStack(StackCodeGen*& field, int vmSt
   }
   return field;
 }
+void ProgramVMCodeGenInterface::flushStack(StackCodeGen*& field) {
+  if (field == NULL) {
+    return;
+  }
+  field->flush();
+  field = NULL;
+}
 
 StackCodeGen* ProgramVMCodeGenInterface::getDataStack() {
   return getStack(dataStackCodeGen, 0);
@@ -547,4 +586,9 @@ StackCodeGen* ProgramVMCodeGenInterface::getRetainStack() {
 }
 StackCodeGen* ProgramVMCodeGenInterface::getContStack() {
   return getStack(contStackCodeGen, 2);
+}
+void ProgramVMCodeGenInterface::flush() {
+  flushStack(dataStackCodeGen);
+  flushStack(retainStackCodeGen);
+  flushStack(contStackCodeGen);
 }

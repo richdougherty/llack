@@ -112,13 +112,14 @@ main (int argc, char ** argv)
   assert(word_main != NULL && "Expected 'main' word.");
   push(&vmState->cont, mainLocation);
 
+  int instructionCount = 0;
   for (;;) {
     dumpVMState(vmState);
 
     Interpretable** cont = pop<Interpretable**>(&vmState->cont);
     
     if (cont == NULL) break;
-    printf("==== cont: (%p) ====\n", (void*) cont);
+    printf("==== %d: cont: %p ====\n", ++instructionCount, (void*) cont);
     Interpretable* i = *cont;
     i->interpret(cont + 1, vmState);
   }

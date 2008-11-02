@@ -118,6 +118,7 @@ class VMCodeGenInterface {
   virtual void pushCont(Location* w) = 0;
   virtual Location* popCont() = 0;
   virtual Instruction* addInstruction(Instruction* inst) = 0;
+  virtual void flush() = 0;
 
   virtual Location* lookupWordLocation(Word* word) = 0; // XXX: Rename to 'lookup'?
 
@@ -146,28 +147,19 @@ class ImmediateStackCodeGen : public StackCodeGen {
   virtual void flush();
 };
 
-/*
-class CachingStackCodeGen {
+class CachingStackCodeGen : public StackCodeGen {
  private:
-  /// The address that holds the stack's state, which is currently just a pointer
-  /// to the top of the stack.
-  Value* address;
-  /// The address of the top of the stack (*address).
-  Value* originalTop;
-  /// 
-  //int topElementDelta;
-  int byteOffset;
-  std::vector<LlackValue*> production;
-  const Type* locationType;
-  void init();
+  // Using delegate prevents minimising updates to the top of the stack address.
+  // However, LLVM will be able to optimise this.
+  StackCodeGen* delegate;
+  std::vector<LlackValue*> cache;
  public:
-  CachingStackCodeGen(Value* address_, const Type* locationType_) : address(address_), locationType(locationType_) {
-    init();
-  }
-  void push(LlackValue* v);
-  LlackValue* pop(LlackType* t);
-  void flush();
-};*/
+  CachingStackCodeGen(VMCodeGenInterface* cgi_, Value* stackAddress_);
+  virtual ~CachingStackCodeGen();
+  virtual void push(LlackValue* v);
+  virtual LlackValue* pop(LlackType* t);
+  virtual void flush();
+};
 
 class SimpleVMCodeGenInterface : public VMCodeGenInterface {
  private:
@@ -190,6 +182,7 @@ class SimpleVMCodeGenInterface : public VMCodeGenInterface {
   virtual Instruction* addInstruction(Instruction* inst);
   virtual Type* getLocationType();
   virtual Location* lookupWordLocation(Word* word);
+  virtual void flush();
  private:
   Type* getStackType();
   Type* getVMStateType();
@@ -349,6 +342,7 @@ class ProgramVMCodeGenInterface : public VMCodeGenInterface {
   virtual Instruction* addInstruction(Instruction* inst);
   virtual Type* getLocationType();
   virtual Location* lookupWordLocation(Word* word);
+  virtual void flush();
  private:
   Type* getStackType();
   Type* getVMStateType();
@@ -356,6 +350,7 @@ class ProgramVMCodeGenInterface : public VMCodeGenInterface {
   StackCodeGen* getRetainStack();
   StackCodeGen* getContStack();
   
+  void flushStack(StackCodeGen*& field);
   StackCodeGen* getStack(StackCodeGen*& field, int index);
 };
 
