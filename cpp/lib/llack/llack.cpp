@@ -34,6 +34,7 @@ compute_llack (int a)
 #include "llvm/Target/TargetData.h"
 #include "llvm/CallingConv.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/Support/raw_ostream.h"
 
 //#include "llack.h"
 
@@ -388,14 +389,14 @@ void WordInterpretable::initFunction() {
   // Build Function for Word
   
   function = Function::Create(funcTy, Function::ExternalLinkage, "", module);
-  function->setCallingConv(CallingConv::Fast);
+  //function->setCallingConv(CallingConv::Fast);
   
   Function::arg_iterator args = function->arg_begin();
   Value* vmStatePtr = args++;
   vmStatePtr->setName("vmStatePtr");
 
   BasicBlock *bb = BasicBlock::Create("entry", function);
-  IRBuilder builder;
+  IRBuilder<> builder;
   builder.SetInsertPoint(bb);
   
   VMCodeGenInterface* cgi = pw->getVMCodeGenInterface(vmStatePtr, &builder);
@@ -408,6 +409,9 @@ void WordInterpretable::interpret(void* vpc, VMState* vmState) {
   if (function == NULL) {
     initFunction();
   }
+  //outs() << static_cast<Value&>(*function);
+  //outs().flush();
+
   ExecutionEngine* ee = pw->getExecutionEngine();
   std::vector<GenericValue> argValues(1);
   argValues[0].PointerVal = vmState;
@@ -501,7 +505,7 @@ ProgramWriter::Location ProgramWriter::getWordLocation(Word* word) {
   return wordMap[word];
 }
 
-VMCodeGenInterface* ProgramWriter::getVMCodeGenInterface(Value* vmStatePtr, IRBuilder* builder) {
+VMCodeGenInterface* ProgramWriter::getVMCodeGenInterface(Value* vmStatePtr, IRBuilder<>* builder) {
   return new ProgramVMCodeGenInterface(this, vmStatePtr, builder);
 }
 

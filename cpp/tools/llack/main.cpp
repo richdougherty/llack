@@ -33,59 +33,7 @@ T pop(char** stack) {
   return *((T*) *stack);
 }
 
-Function* generateFunction(Module* module, ExecutionEngine* ee, Word* word, bool generateDebug) {
-  Type* stackType = PointerType::getUnqual(Type::Int8Ty);
-  Type* vmStateType = StructType::get(
-     stackType, // data
-     stackType, // retain
-     stackType, // cont
-     NULL
-    );
-  
-  // Build Function for Word.
-
-  std::vector<const Type*> argTypes;
-  argTypes.push_back(PointerType::getUnqual(vmStateType));
-  FunctionType *funcTy = FunctionType::get(Type::VoidTy, argTypes, false);
-  
-  // Build Function for Word
-  
-  Function *func = Function::Create(funcTy, Function::ExternalLinkage, "", module);
-  func->setCallingConv(CallingConv::Fast);
-  
-  Function::arg_iterator args = func->arg_begin();
-  Value* vmStatePtr = args++;
-  vmStatePtr->setName("vmStatePtr");
-
-  BasicBlock *bb = BasicBlock::Create("entry", func);
-  IRBuilder builder;
-  builder.SetInsertPoint(bb);
-  
-  VMCodeGenInterface* cgi = new SimpleVMCodeGenInterface(module, ee->getTargetData(), vmStatePtr, &builder);
-  for (std::vector<LlackInstruction*>::iterator iter = word->instructions.begin(); iter < word->instructions.end(); ++iter) {
-    // Instruction generation
-  
-    LlackInstruction* inst = *iter;
-    printf("Generating instruction code.\n");
-    //Value *dataSP = builder.CreateStructGEP(vmStatePtr, 0);
-    inst->codeGen(cgi);
-
-    // Pointer to dumping Code
-    
-    if (generateDebug) {
-      ConstantInt* intValue = ConstantInt::get(Type::Int32Ty, (int) &dumpVMState, false);
-      Value* dumpVMStatePtr = builder.CreateIntToPtr(intValue, PointerType::getUnqual(funcTy));
-      builder.CreateCall(dumpVMStatePtr, vmStatePtr);
-    }
-  }    
-
-  builder.CreateRetVoid();
-
-  return func;
-}
-
-int
-main (int argc, char ** argv)
+int main (int argc, char ** argv)
 {
   LlackModule* mod = createFactorialModule();
   

@@ -8,7 +8,6 @@
 #ifndef LLACK_LLACK_H
 #define LLACK_LLACK_H
 
-#include "llvm/DerivedTypes.h"
 #include "llvm/GlobalValue.h"
 #include "llvm/Module.h"
 #include "llvm/Analysis/Verifier.h"
@@ -166,9 +165,9 @@ class SimpleVMCodeGenInterface : public VMCodeGenInterface {
   Module* mod;
   const TargetData* td;
   Value* vmStatePtr;
-  IRBuilder* builder;
+  IRBuilder<>* builder;
  public:
- SimpleVMCodeGenInterface(Module* mod_, const TargetData* td_, Value* vmStatePtr_, IRBuilder* builder_):
+ SimpleVMCodeGenInterface(Module* mod_, const TargetData* td_, Value* vmStatePtr_, IRBuilder<>* builder_):
   mod(mod_), td(td_), vmStatePtr(vmStatePtr_), builder(builder_)
   {}
   virtual ~SimpleVMCodeGenInterface();
@@ -307,7 +306,7 @@ class ProgramWriter {
   ExecutionEngine* getExecutionEngine() {
     return ee;
   }
-  VMCodeGenInterface* getVMCodeGenInterface(Value* vmStatePtr, IRBuilder* builder);
+  VMCodeGenInterface* getVMCodeGenInterface(Value* vmStatePtr, IRBuilder<>* builder);
   
   Location insertWord(Word* word);
   Location insertPush(Constant* constant);
@@ -324,12 +323,12 @@ class ProgramVMCodeGenInterface : public VMCodeGenInterface {
  private:
   ProgramWriter* pw;
   Value* vmStatePtr;
-  IRBuilder* builder;
+  IRBuilder<>* builder;
   StackCodeGen* dataStackCodeGen;
   StackCodeGen* retainStackCodeGen;
   StackCodeGen* contStackCodeGen;
  public:
-  ProgramVMCodeGenInterface(ProgramWriter* pw_, Value* vmStatePtr_, IRBuilder* builder_):
+  ProgramVMCodeGenInterface(ProgramWriter* pw_, Value* vmStatePtr_, IRBuilder<>* builder_):
     pw(pw_), vmStatePtr(vmStatePtr_), builder(builder_), dataStackCodeGen(NULL), retainStackCodeGen(NULL), contStackCodeGen(NULL) {}
   virtual ~ProgramVMCodeGenInterface();
   virtual const TargetData* getTargetData();

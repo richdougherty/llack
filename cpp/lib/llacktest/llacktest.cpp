@@ -80,7 +80,7 @@ Word* word_factorial_accum$q2$k7$i32 = Word::Create("factorial_accum$q2$k7$i32",
   }
   {
     // push i32 3
-    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "3", 10))));
+    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32, 3))));
     word->instructions.push_back(inst);
   }
   {
@@ -100,7 +100,7 @@ Word* word_factorial_accum$q2$k7$i32 = Word::Create("factorial_accum$q2$k7$i32",
   Word* word = word_main$q21;
   {
     // push i32 5
-    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "5", 10))));
+    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32, 5))));
     word->instructions.push_back(inst);
   }
   {
@@ -155,7 +155,7 @@ Word* word_factorial_accum$q2$k7$i32 = Word::Create("factorial_accum$q2$k7$i32",
   Word* word = word_factorial$i32;
   {
     // push i32 1
-    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "1", 10))));
+    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32, 1))));
     word->instructions.push_back(inst);
   }
   {
@@ -205,7 +205,7 @@ Word* word_factorial_accum$q2$k7$i32 = Word::Create("factorial_accum$q2$k7$i32",
   Word* word = word_times$k19$i32;
   {
     // push i32 1
-    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "1", 10))));
+    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32, 1))));
     word->instructions.push_back(inst);
   }
   {
@@ -301,7 +301,7 @@ Word* word_factorial_accum$q2$k7$i32 = Word::Create("factorial_accum$q2$k7$i32",
   Word* word = word_factorial_accum$k9$i32;
   {
     // push i32 1
-    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "1", 10))));
+    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32, 1))));
     word->instructions.push_back(inst);
   }
   {
@@ -404,7 +404,7 @@ Word* word_factorial_accum$q2$k7$i32 = Word::Create("factorial_accum$q2$k7$i32",
   Word* word = word_times$q13$i32;
   {
     // push i32 1
-    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "1", 10))));
+    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32, 1))));
     word->instructions.push_back(inst);
   }
   {
@@ -774,7 +774,7 @@ Word* word_factorial_accum$q2$k7$i32 = Word::Create("factorial_accum$q2$k7$i32",
   Word* word = word_factorial_accum$q2$k3$i32;
   {
     // push i32 1
-    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32,  "1", 10))));
+    LlackInstruction* inst = new PushLlackInst(new LlvmLlackValue(ConstantInt::get(APInt(32, 1))));
     word->instructions.push_back(inst);
   }
   {
